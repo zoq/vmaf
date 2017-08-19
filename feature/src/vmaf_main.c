@@ -59,7 +59,7 @@ int run_vmaf(const char *app, const char *fmt, const char *ref_path, const char 
     {
         struct noref_data *s;
         s = (struct noref_data *)malloc(sizeof(struct noref_data));
-        s->format = fmt;
+        s->format = (char *)fmt;
         s->width = w;
         s->height = h;
 
@@ -96,7 +96,7 @@ fail_or_end_noref:
     {
         struct data *s;
         s = (struct data *)malloc(sizeof(struct data));
-        s->format = fmt;
+        s->format = (char *)fmt;
         s->width = w;
         s->height = h;
 

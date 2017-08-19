@@ -18,7 +18,9 @@ import platform
 from setuptools import setup, find_packages, Command
 from setuptools.command.install_egg_info import install_egg_info as _install_egg_info
 from setuptools.dist import Distribution
-
+from distutils.extension import Extension
+from Cython.Distutils import build_ext
+from Cython.Build import cythonize
 
 DOCLINES = __doc__.strip().split("\n")
 os.chdir(os.path.dirname(os.path.abspath(__file__)))        # setup.py should be ran from its folder, just in case one tries to execute it from a different folder
@@ -175,4 +177,15 @@ setup(
     package_dir={'': 'src'},
     packages=find_packages('src'),
     include_package_data=True,
+    ext_modules = cythonize(
+        [
+            Extension("vmaf.feature.moment", ["src/vmaf/feature/moment.pyx", "../feature/src/moment.c"], libraries = ["vmaf", "c", "m"], library_dirs = ["../wrapper"]),
+            Extension("vmaf.feature.psnr", ["src/vmaf/feature/psnr.pyx", "../feature/src/psnr.c"], libraries = ["vmaf", "c", "m"], library_dirs = ["../wrapper"]),
+            Extension("vmaf.feature.ssim", ["src/vmaf/feature/ssim.pyx", "../feature/src/ssim.c"], libraries = ["vmaf", "c", "m"], library_dirs = ["../wrapper"]),
+            Extension("vmaf.feature.ms_ssim", ["src/vmaf/feature/ms_ssim.pyx", "../feature/src/ms_ssim.c"], libraries = ["vmaf", "c", "m"], library_dirs = ["../wrapper"]),
+            Extension("vmaf.feature.vmaf", ["src/vmaf/feature/vmaf.pyx", "../feature/src/all.c"], libraries = ["vmaf", "c", "m"], library_dirs = ["../wrapper"], language="c++"),
+            Extension("vmaf.feature.vmafossexec", ["src/vmaf/feature/vmafossexec.pyx"], libraries = ["vmaf", "c", "m"], library_dirs = ["../wrapper"], include_dirs=["../feature/src"], language="c++"),
+        ]
+
+        )
 )
