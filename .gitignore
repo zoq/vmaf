@@ -16,3 +16,6 @@ htmlcov/
 
 *.egg-info
 *.pyc
+python/src/vmaf/feature/*.c
+python/src/vmaf/feature/*.cpp
+python/src/vmaf/feature/*.so
