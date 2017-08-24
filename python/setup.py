@@ -179,12 +179,12 @@ setup(
     include_package_data=True,
     ext_modules = cythonize(
         [
-            Extension("vmaf.feature.moment", ["src/vmaf/feature/moment.pyx", "../feature/src/moment.c"], libraries = ["vmaf", "c", "m"], library_dirs = ["../wrapper"]),
-            Extension("vmaf.feature.psnr", ["src/vmaf/feature/psnr.pyx", "../feature/src/psnr.c"], libraries = ["vmaf", "c", "m"], library_dirs = ["../wrapper"]),
-            Extension("vmaf.feature.ssim", ["src/vmaf/feature/ssim.pyx", "../feature/src/ssim.c"], libraries = ["vmaf", "c", "m"], library_dirs = ["../wrapper"]),
-            Extension("vmaf.feature.ms_ssim", ["src/vmaf/feature/ms_ssim.pyx", "../feature/src/ms_ssim.c"], libraries = ["vmaf", "c", "m"], library_dirs = ["../wrapper"]),
-            Extension("vmaf.feature.vmaf", ["src/vmaf/feature/vmaf.pyx", "../feature/src/all.c"], libraries = ["vmaf", "c", "m"], library_dirs = ["../wrapper"], language="c++"),
-            Extension("vmaf.feature.vmafossexec", ["src/vmaf/feature/vmafossexec.pyx"], libraries = ["vmaf", "c", "m"], library_dirs = ["../wrapper"], include_dirs=["../feature/src"], language="c++"),
+            Extension("vmaf.feature.moment", ["src/vmaf/feature/moment.pyx", "../feature/src/moment.c"], libraries = ["vmaf", "c", "m"], library_dirs = ["../wrapper"], extra_compile_args=['-std=c99']),
+            Extension("vmaf.feature.psnr", ["src/vmaf/feature/psnr.pyx", "../feature/src/psnr.c"], libraries = ["vmaf", "c", "m"], library_dirs = ["../wrapper"], extra_compile_args=['-std=c99']),
+            Extension("vmaf.feature.ssim", ["src/vmaf/feature/ssim.pyx", "../feature/src/ssim.c"], libraries = ["vmaf", "c", "m"], library_dirs = ["../wrapper"], extra_compile_args=['-std=c99']),
+            Extension("vmaf.feature.ms_ssim", ["src/vmaf/feature/ms_ssim.pyx", "../feature/src/ms_ssim.c"], libraries = ["vmaf", "c", "m"], library_dirs = ["../wrapper"], extra_compile_args=['-std=c99']),
+            Extension("vmaf.feature.vmaf", ["src/vmaf/feature/vmaf.pyx", "../feature/src/all.c"], libraries = ["vmaf", "c", "m"], library_dirs = ["../wrapper"], language="c++", extra_compile_args=['-std=c99']),
+            Extension("vmaf.feature.vmafossexec", ["src/vmaf/feature/vmafossexec.pyx"], libraries = ["vmaf", "c", "m"], library_dirs = ["../wrapper"], include_dirs=["../feature/src"], language="c++", extra_compile_args=['-std=c++11']),
         ]
 
         )

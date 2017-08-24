@@ -53,6 +53,30 @@ class ExternalProgramCaller(object):
             logger.info(psnr_cmd)
         run_process(psnr_cmd, shell=True)
 
+        # from vmaf.feature.psnr import run_psnr
+        #
+        # run_psnr(yuv_type, ...)
+        #
+        # from contextlib import redirect_stdout
+        #
+        # with open('help.txt', 'w') as f:
+        #     with redirect_stdout(f):
+        #         print('it now prints to `help.text`')
+        #
+        # import sys
+        #
+        # class Logger(object):
+        #     def __init__(self, filename="Default.log"):
+        #         self.terminal = sys.stdout
+        #         self.log = open(filename, "a")
+        #
+        #     def write(self, message):
+        #         self.terminal.write(message)
+        #         self.log.write(message)
+        #
+        # sys.stdout = Logger("yourlogfilename.txt")
+        # print "Hello world !" # this is should be saved in yourlogfilename.txt
+
     @staticmethod
     def call_ssim(yuv_type, ref_path, dis_path, w, h, log_file_path, logger=None):
 
