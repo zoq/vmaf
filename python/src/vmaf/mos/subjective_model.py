@@ -455,7 +455,7 @@ class MaximumLikelihoodEstimationModel(SubjectiveModel):
 
     mode = 'DEFAULT'
 
-    DEFAULT_GRADIENT_METHOD = 'simplified'
+    DEFAULT_GRADIENT_METHOD = 'numerical'
 
     @staticmethod
     def loglikelihood_fcn(x_es, x_e, b_s, v_s, a_c, content_id_of_dis_videos, axis):
@@ -465,6 +465,18 @@ class MaximumLikelihoodEstimationModel(SubjectiveModel):
         vs2_add_ace2 = np.tile(v_s**2, (E, 1)) + np.tile(a_c_e**2, (S, 1)).T
         ret = - 1.0 / 2 * np.log(vs2_add_ace2) - 1.0 / 2 * a_es**2 / vs2_add_ace2
         ret = pd.DataFrame(ret).sum(axis=axis)
+
+        from scipy.stats import uniform, norm
+        def p_x_e(x):
+            return uniform(loc=1., scale=4.).pdf(x)
+        def p_b_s(x):
+            return norm(loc=0., scale=1.).pdf(x)
+        def p_v_s(x):
+            return uniform(loc=0, scale=0.4).pdf(x)
+        def p_a_c(x):
+            return uniform(loc=0.4, scale=0.2).pdf(x)
+        ret += np.sum(np.log(p_x_e(x_e) + 1.e-5)) + np.sum(np.log(p_b_s(b_s))) + np.sum(np.log(p_v_s(v_s) + 1.e-5)) + np.sum(np.log(p_a_c(a_c) + 1.e-5))
+
         return ret
 
     @classmethod
@@ -521,6 +533,19 @@ class MaximumLikelihoodEstimationModel(SubjectiveModel):
         b_s = np.zeros(S)
         v_s = np.zeros(S) if cls.mode == 'NO_SUBJECT' else sigma_r_s
         a_c = np.zeros(C) if cls.mode == 'NO_CONTENT' else sigma_r_c
+
+        np.random.seed(0)
+        result = {
+            'quality_scores': np.random.uniform(1, 5, 79),
+            'observer_bias': np.random.normal(0, 1, 30),
+            'observer_inconsistency': np.abs(np.random.uniform(0.0, 0.4, 30)),
+            'content_bias': np.random.normal(0, 0.00001, 9),
+            'content_ambiguity': np.abs(np.random.uniform(0.4, 0.6, 9)),
+        }
+        x_e = result['quality_scores']
+        b_s = result['observer_bias']
+        v_s = result['observer_inconsistency']
+        a_c = result['content_ambiguity']
 
         x_e_std = None
         b_s_std = None
