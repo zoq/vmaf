@@ -74,7 +74,9 @@ def read_dataset(dataset, **kwargs):
         ref_video = ref_dict[dis_video['content_id']]
 
         ref_path = ref_video['path']
-        yuv_fmt_ = yuv_fmt if yuv_fmt is not None else ref_dict[dis_video['content_id']]['yuv_fmt']
+
+        ref_yuv_fmt_ = yuv_fmt if yuv_fmt is not None else ref_dict[dis_video['content_id']]['yuv_fmt']
+        dis_yuv_fmt_ = dis_video['yuv_fmt'] if 'yuv_fmt' in dis_video else ref_yuv_fmt_
 
         if width is not None:
             width_ = width
@@ -125,11 +127,17 @@ def read_dataset(dataset, **kwargs):
         else:
             pad_cmd_ = None
 
-        asset_dict = {'yuv_type': yuv_fmt_}
+        asset_dict = {'ref_yuv_type': ref_yuv_fmt_, 'dis_yuv_type': dis_yuv_fmt_}
         if width_ is not None:
-            asset_dict['width'] = width_
+            if asset_dict['ref_yuv_type'] != 'notyuv':
+                asset_dict['ref_width'] = width_
+            if asset_dict['dis_yuv_type'] != 'notyuv':
+                asset_dict['dis_width'] = width_
         if height_ is not None:
-            asset_dict['height'] = height_
+            if asset_dict['ref_yuv_type'] != 'notyuv':
+                asset_dict['ref_height'] = height_
+            if asset_dict['dis_yuv_type'] != 'notyuv':
+                asset_dict['dis_height'] = height_
         if groundtruth is not None:
             asset_dict['groundtruth'] = groundtruth
         if raw_groundtruth is not None:
@@ -185,7 +193,8 @@ def run_test_on_dataset(test_dataset, runner_class, ax,
     except AssertionError:
         # no groundtruth, try do subjective modeling
         subj_model_class = kwargs['subj_model_class'] if 'subj_model_class' in kwargs and kwargs['subj_model_class'] is not None else DmosModel
-        subjective_model = subj_model_class(RawDatasetReader(test_dataset))
+        dataset_reader_class = kwargs['dataset_reader_class'] if 'dataset_reader_class' in kwargs else RawDatasetReader
+        subjective_model = subj_model_class(dataset_reader_class(test_dataset))
         subjective_model.run_modeling(**kwargs)
         test_dataset_aggregate = subjective_model.to_aggregated_dataset(**kwargs)
         test_raw_assets = test_assets
@@ -278,7 +287,8 @@ def train_test_vmaf_on_dataset(train_dataset, test_dataset,
     except AssertionError:
         # no groundtruth, try do subjective modeling
         subj_model_class = kwargs['subj_model_class'] if 'subj_model_class' in kwargs and kwargs['subj_model_class'] is not None else DmosModel
-        subjective_model = subj_model_class(RawDatasetReader(train_dataset))
+        dataset_reader_class = kwargs['dataset_reader_class'] if 'dataset_reader_class' in kwargs else RawDatasetReader
+        subjective_model = subj_model_class(dataset_reader_class(train_dataset))
         subjective_model.run_modeling(**kwargs)
         train_dataset_aggregate = subjective_model.to_aggregated_dataset(**kwargs)
         train_raw_assets = train_assets
@@ -368,7 +378,8 @@ def train_test_vmaf_on_dataset(train_dataset, test_dataset,
         except AssertionError:
             # no groundtruth, try do subjective modeling
             subj_model_class = kwargs['subj_model_class'] if 'subj_model_class' in kwargs and kwargs['subj_model_class'] is not None else DmosModel
-            subjective_model = subj_model_class(RawDatasetReader(test_dataset))
+            dataset_reader_class = kwargs['dataset_reader_class'] if 'dataset_reader_class' in kwargs else RawDatasetReader
+            subjective_model = subj_model_class(dataset_reader_class(test_dataset))
             subjective_model.run_modeling(**kwargs)
             test_dataset_aggregate = subjective_model.to_aggregated_dataset(**kwargs)
             test_raw_assets = test_assets

@@ -31,9 +31,13 @@ class SubjectiveModel(TypeVersionEnabled):
     def _run_modeling(cls, dataset_reader, **kwargs):
         raise NotImplementedError
 
+    def _assert_args(self):
+        assert isinstance(self.dataset_reader, RawDatasetReader)
+
     def __init__(self, dataset_reader):
         TypeVersionEnabled.__init__(self)
         self.dataset_reader = dataset_reader
+        self._assert_args()
 
     @classmethod
     def from_dataset_file(cls, dataset_filepath, content_ids=None):
@@ -154,7 +158,8 @@ class SubjectiveModel(TypeVersionEnabled):
 
         return s_es
 
-    def _postprocess_model_result(self, result, **kwargs):
+    @staticmethod
+    def _postprocess_model_result(result, **kwargs):
 
         # normalize_final: True - do normalization on final quality score
         #                  False - don't do
@@ -422,7 +427,7 @@ class MaximumLikelihoodEstimationModelReduced(SubjectiveModel):
         }
 
         try:
-            observers = dataset_reader._get_list_observers # may not exist
+            observers = dataset_reader._get_list_observers() # may not exist
             result['observers'] = observers
         except AssertionError:
             pass
@@ -470,8 +475,7 @@ class MaximumLikelihoodEstimationModel(SubjectiveModel):
         #       NO_CONTENT - content-unaware
 
         if 'subject_rejection' in kwargs and kwargs['subject_rejection'] is True:
-            assert False, 'SubjectAndContentAwareGenerativeModel must not ' \
-                          'and need not apply subject rejection.'
+            assert False, '{} must not and need not apply subject rejection.'.format(cls.__name__)
 
         gradient_method = kwargs['gradient_method'] if 'gradient_method' in kwargs else cls.DEFAULT_GRADIENT_METHOD
         assert gradient_method == 'simplified' or gradient_method == 'original' or gradient_method == 'numerical'
@@ -497,6 +501,11 @@ class MaximumLikelihoodEstimationModel(SubjectiveModel):
                 stds.append(pd.Series(l).std(ddof=0))
             return np.array(stds)
 
+        def one_or_nan(x):
+            y = np.ones(x.shape)
+            y[np.isnan(x)] = float('nan')
+            return y
+
         x_es = cls._get_opinion_score_2darray_with_preprocessing(dataset_reader, **kwargs)
         E, S = x_es.shape
         C = dataset_reader.num_ref_videos
@@ -504,21 +513,14 @@ class MaximumLikelihoodEstimationModel(SubjectiveModel):
         # === initialization ===
 
         mos = np.array(MosModel(dataset_reader).run_modeling()['quality_scores'])
+        r_es = x_es - np.tile(mos, (S, 1)).T # r_es: residual at e, s
+        sigma_r_s = pd.DataFrame(r_es).std(axis=0, ddof=0) # along e
+        sigma_r_c = std_over_subject_and_content_id(r_es, dataset_reader.content_id_of_dis_videos)
 
         x_e = mos # use MOS as initial value for x_e
         b_s = np.zeros(S)
-        r_es = x_es - np.tile(x_e, (S, 1)).T # r_es: residual at e, s
-
-        if cls.mode == 'NO_SUBJECT':
-            v_s = np.zeros(S)
-        else:
-            v_s = pd.DataFrame(r_es).std(axis=0, ddof=0) # along e
-
-        if cls.mode == 'NO_CONTENT':
-            a_c = np.zeros(C)
-        else:
-            a_c = std_over_subject_and_content_id(
-                r_es, dataset_reader.content_id_of_dis_videos)
+        v_s = np.zeros(S) if cls.mode == 'NO_SUBJECT' else sigma_r_s
+        a_c = np.zeros(C) if cls.mode == 'NO_CONTENT' else sigma_r_c
 
         x_e_std = None
         b_s_std = None
@@ -546,7 +548,7 @@ class MaximumLikelihoodEstimationModel(SubjectiveModel):
                 num_num = x_es - np.tile(x_e, (S, 1)).T
                 num_den = np.tile(v_s**2, (E, 1)) + np.tile(a_c_e**2, (S, 1)).T
                 num = pd.DataFrame(num_num / num_den).sum(axis=0) # sum over e
-                den_num = x_es / x_es # 1 and nan
+                den_num = one_or_nan(x_es) # 1 and nan
                 den_den = num_den
                 den = pd.DataFrame(den_num / den_den).sum(axis=0) # sum over e
                 b_s_new = num / den
@@ -558,7 +560,7 @@ class MaximumLikelihoodEstimationModel(SubjectiveModel):
                 vs2_add_ace2 = np.tile(v_s**2, (E, 1)) + np.tile(a_c_e**2, (S, 1)).T
                 order1 = (x_es - np.tile(x_e, (S, 1)).T - np.tile(b_s, (E, 1))) / vs2_add_ace2
                 order1 = pd.DataFrame(order1).sum(axis=0) # sum over e
-                order2 = - (x_es / x_es) / vs2_add_ace2
+                order2 = - one_or_nan(x_es) / vs2_add_ace2
                 order2 = pd.DataFrame(order2).sum(axis=0) # sum over e
                 b_s_new = b_s - order1 / order2
                 b_s = b_s * (1.0 - REFRESH_RATE) + b_s_new * REFRESH_RATE
@@ -716,7 +718,7 @@ class MaximumLikelihoodEstimationModel(SubjectiveModel):
                 num_num = x_es - np.tile(b_s, (E, 1))
                 num_den = np.tile(v_s**2, (E, 1)) + np.tile(a_c_e**2, (S, 1)).T
                 num = pd.DataFrame(num_num / num_den).sum(axis=1) # sum over s
-                den_num = x_es / x_es # 1 and nan
+                den_num = one_or_nan(x_es) # 1 and nan
                 den_den = num_den
                 den = pd.DataFrame(den_num / den_den).sum(axis=1) # sum over s
                 x_e_new = num / den
@@ -729,7 +731,7 @@ class MaximumLikelihoodEstimationModel(SubjectiveModel):
                 vs2_add_ace2 = np.tile(v_s**2, (E, 1)) + np.tile(a_c_e**2, (S, 1)).T
                 order1 = a_es / vs2_add_ace2
                 order1 = pd.DataFrame(order1).sum(axis=1) # sum over s
-                order2 = - (x_es / x_es) / vs2_add_ace2
+                order2 = - one_or_nan(x_es) / vs2_add_ace2
                 order2 = pd.DataFrame(order2).sum(axis=1) # sum over s
                 x_e_new = x_e - order1 / order2
                 x_e = x_e * (1.0 - REFRESH_RATE) + x_e_new * REFRESH_RATE
@@ -753,8 +755,10 @@ class MaximumLikelihoodEstimationModel(SubjectiveModel):
 
             delta_x_e = linalg.norm(x_e_prev - x_e)
 
-            msg = 'Iteration {itr:4d}: change {delta_x_e}, mean x_e {x_e}, mean b_s {b_s}, mean v_s {v_s}, mean a_c {a_c}'.\
-                format(itr=itr, delta_x_e=delta_x_e, x_e=np.mean(x_e), b_s=np.mean(b_s), v_s=np.mean(v_s), a_c=np.mean(a_c))
+            likelihood = np.sum(cls.loglikelihood_fcn(x_es, x_e, b_s, v_s, a_c, dataset_reader.content_id_of_dis_videos, axis=1))
+
+            msg = 'Iteration {itr:4d}: change {delta_x_e}, likelihood {likelihood}, x_e {x_e}, b_s {b_s}, v_s {v_s}, a_c {a_c}'.\
+                format(itr=itr, delta_x_e=delta_x_e, likelihood=likelihood, x_e=np.mean(x_e), b_s=np.mean(b_s), v_s=np.mean(v_s), a_c=np.mean(a_c))
             sys.stdout.write(msg + '\r')
             sys.stdout.flush()
             # time.sleep(0.001)

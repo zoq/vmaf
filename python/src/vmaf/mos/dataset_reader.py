@@ -2,7 +2,7 @@ import pprint
 import copy
 
 import numpy as np
-from vmaf.tools.misc import empty_object
+from vmaf.tools.misc import empty_object, get_unique_sorted_list
 
 __copyright__ = "Copyright 2016-2017, Netflix, Inc."
 __license__ = "Apache, Version 2.0"
@@ -14,7 +14,7 @@ class DatasetReader(object):
         self._assert_dataset()
 
     def _assert_dataset(self):
-        # assert content id is from 0 to the total_cotent - 1
+        # assert content id is from 0 to the total_content - 1
         cids = []
         for ref_video in self.dataset.ref_videos:
             cids.append(ref_video['content_id'])
@@ -69,7 +69,7 @@ class DatasetReader(object):
         # write out
         with open(output_dataset_filepath, 'wt') as output_file:
             for key in dataset.__dict__.keys():
-                if key != 'ref_videos' and key != 'dis_videos' and key != '__builtins__':
+                if key != 'ref_videos' and key != 'dis_videos' and not key.startswith('__'):
                     output_file.write('{} = '.format(key) + repr(
                         dataset.__dict__[key]) + '\n')
             output_file.write('\n')
@@ -100,7 +100,10 @@ class RawDatasetReader(DatasetReader):
             assert isinstance(dis_video['os'], (list, tuple, dict))
 
         # make sure each dis video has equal number of observers
-        if isinstance(self.dataset.dis_videos[0]['os'], list) or isinstance(self.dataset.dis_videos[0]['os'], tuple):
+        if (
+                    isinstance(self.dataset.dis_videos[0]['os'], list) or
+                    isinstance(self.dataset.dis_videos[0]['os'], tuple)
+        ):
             num_observers = len(self.dataset.dis_videos[0]['os'])
             for dis_video in self.dataset.dis_videos[1:]:
                 assert num_observers == len(dis_video['os']), \
@@ -112,23 +115,27 @@ class RawDatasetReader(DatasetReader):
 
     @property
     def num_observers(self):
-        if isinstance(self.dataset.dis_videos[0]['os'], list) \
-                or isinstance(self.dataset.dis_videos[0]['os'], tuple):
+        if (
+                    isinstance(self.dataset.dis_videos[0]['os'], list) or
+                    isinstance(self.dataset.dis_videos[0]['os'], tuple)
+        ):
             return len(self.dataset.dis_videos[0]['os'])
         elif isinstance(self.dataset.dis_videos[0]['os'], dict):
-            list_observers = self._get_list_observers
+            list_observers = self._get_list_observers()
             return len(list_observers)
         else:
             assert False, ''
 
-    @property
     def _get_list_observers(self):
-        list_observers = []
+
         for dis_video in self.dataset.dis_videos:
             assert isinstance(dis_video['os'], dict)
+
+        list_observers = []
+        for dis_video in self.dataset.dis_videos:
             list_observers += dis_video['os'].keys()
-        list_observers = sorted(list(set(list_observers)))  # unique, sorted
-        return list_observers
+
+        return get_unique_sorted_list(list_observers)
 
     @property
     def opinion_score_2darray(self):
@@ -143,7 +150,7 @@ class RawDatasetReader(DatasetReader):
             for i_dis_video, dis_video in enumerate(self.dataset.dis_videos):
                 score_mtx[i_dis_video, :] = dis_video['os']
         elif isinstance(self.dataset.dis_videos[0]['os'], dict):
-            list_observers = self._get_list_observers
+            list_observers = self._get_list_observers()
             for i_dis_video, dis_video in enumerate(self.dataset.dis_videos):
                 for i_observer, observer in enumerate(list_observers):
                     if observer in dis_video['os']:
@@ -155,10 +162,11 @@ class RawDatasetReader(DatasetReader):
     def to_aggregated_dataset(self, aggregate_scores, **kwargs):
 
         newone = empty_object()
-        newone.dataset_name = self.dataset.dataset_name
-        newone.yuv_fmt = self.dataset.yuv_fmt
-        newone.width = self.dataset.width
-        newone.height = self.dataset.height
+
+        # systematically copy fields, e.g. dataset_name, yuv_fmt, width, height, ...
+        for key in self.dataset.__dict__.keys():
+            if not key.startswith('__'): # filter out those e.g. __builtin__ ...
+                setattr(newone, key, getattr(self.dataset, key))
 
         if 'quality_width' in kwargs and kwargs['quality_width'] is not None:
             newone.quality_width = kwargs['quality_width']
@@ -200,10 +208,11 @@ class RawDatasetReader(DatasetReader):
         import math
 
         newone = empty_object()
-        newone.dataset_name = self.dataset.dataset_name
-        newone.yuv_fmt = self.dataset.yuv_fmt
-        newone.width = self.dataset.width
-        newone.height = self.dataset.height
+
+        # systematically copy fields, e.g. dataset_name, yuv_fmt, width, height, ...
+        for key in self.dataset.__dict__.keys():
+            if not key.startswith('__'): # filter out those e.g. __builtin__ ...
+                setattr(newone, key, getattr(self.dataset, key))
 
         if 'quality_width' in kwargs and kwargs['quality_width'] is not None:
             newone.quality_width = kwargs['quality_width']
