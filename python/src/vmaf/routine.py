@@ -277,8 +277,24 @@ def run_test_on_dataset(test_dataset, runner_class, ax,
 
     print 'Stats on testing data: {}'.format(model_type.format_stats_for_print(stats))
 
+    import re
+    dd = {
+        '1080': 0,
+        '720': 1,
+        '480': 2,
+        '384': 3,
+        '288': 4,
+        '240': 5,
+    }
+    def get_resolution(asset):
+        try:
+            return dd[re.search(r"_[0-9]+x([0-9]+)_", asset.dis_path).group(1)]
+        except AttributeError:
+            return None
+
     if ax is not None:
-        content_ids = map(lambda asset: asset.content_id, test_assets)
+        # content_ids = map(lambda asset: asset.content_id, test_assets)
+        content_ids = map(get_resolution, test_assets)
 
         if 'point_label' in kwargs:
             if kwargs['point_label'] == 'asset_id':

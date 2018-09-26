@@ -163,6 +163,8 @@ class RegressorMixin(object):
             for i, point_label in enumerate(point_labels):
                 ax.annotate(point_label, (stats['ys_label'][i], stats['ys_label_pred'][i]))
 
+        ax.legend(loc=4)
+
     @staticmethod
     def get_objective_score(result, type='SRCC'):
         """
