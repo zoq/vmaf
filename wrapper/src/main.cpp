@@ -401,13 +401,13 @@ int main(int argc, char *argv[])
 		for(itr_ctr=0;itr_ctr<1000;itr_ctr++)
 		{
 			getMemory(itr_ctr,1);
-			ret = run_wrapper(fmt, width, height, ref_path, dis_path, model_path, char *additional_model_paths,
+			ret = run_wrapper(fmt, width, height, ref_path, dis_path, model_path, additional_model_paths,
                 log_path, log_fmt, disable_clip, disable_avx, enable_transform, phone_model,
                 do_psnr, do_ssim, do_ms_ssim, pool_method, n_thread, n_subsample, enable_conf_interval);
 			getMemory(itr_ctr,2);
 		}
 #else
-        return run_wrapper(fmt, width, height, ref_path, dis_path, model_path, char *additional_model_paths,
+        return run_wrapper(fmt, width, height, ref_path, dis_path, model_path, additional_model_paths,
                 log_path, log_fmt, disable_clip, disable_avx, enable_transform, phone_model,
                 do_psnr, do_ssim, do_ms_ssim, pool_method, n_thread, n_subsample, enable_conf_interval);
 #endif

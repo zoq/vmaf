@@ -1034,7 +1034,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         throw VmafException("Invalid n_subsample value (must be > 0)");
     }
 
-    Asset asset(vmafContext->width, vmafContext->height, vmafContext->fmt);
+    Asset asset(vmafContext->width, vmafContext->height, vmafContext->format);
     std::unique_ptr<IVmafQualityRunner> runner_ptr = VmafQualityRunnerFactory::createVmafQualityRunner(vmafContext->model_path, vmafContext->enable_conf_interval);
 
     Timer timer;
