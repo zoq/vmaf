@@ -37,7 +37,7 @@
 #include "darray.h"
 #include "libvmaf.h"
 
-static const std::string BOOSTRAP_VMAF_MODEL_PREFIX = "vmaf_";
+static const std::string BOOSTRAP_VMAF_MODEL_KEY = "_bootstrap_";
 
 double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
                void *user_data, VmafContext *vmafContext);
@@ -132,7 +132,7 @@ protected:
     static void _clip_value(LibsvmNusvrTrainTestModel& model, double& prediction);
     virtual void _set_prediction_result(
             std::vector<VmafPredictionStruct> predictionStructs,
-            Result& result);
+            Result& result, std::string model_name);
 private:
     const char *model_path;
     static const int INIT_FRAMES = 1000;
@@ -165,7 +165,7 @@ private:
     virtual void _postproc_transform_clip(VmafPredictionStruct& predictionStruct);
     virtual void _set_prediction_result(
             std::vector<VmafPredictionStruct> predictionStructs,
-            Result& result);
+            Result& result, std::string model_name);
 };
 
 #endif /* VMAF_H_ */
