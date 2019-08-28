@@ -223,15 +223,15 @@ void Result::setScoreAggregateMethod(ScoreAggregateMethod scoreAggregateMethod)
 }
 
 std::unique_ptr<IVmafQualityRunner> 
-VmafQualityRunnerFactory::createVmafQualityRunner(const char *model_path, bool enable_conf_interval) {
+VmafQualityRunnerFactory::createVmafQualityRunner(ModelPredictionContext *mp_ctx) {
     std::unique_ptr<IVmafQualityRunner> runner_ptr;
-    if (enable_conf_interval)
+    if (mp_ctx->enable_conf_interval)
     {
-        runner_ptr = std::unique_ptr<BootstrapVmafQualityRunner>(new BootstrapVmafQualityRunner(model_path));
+        runner_ptr = std::unique_ptr<BootstrapVmafQualityRunner>(new BootstrapVmafQualityRunner(mp_ctx->model_path));
     }
     else
     {
-        runner_ptr = std::unique_ptr<VmafQualityRunner>(new VmafQualityRunner(model_path));
+        runner_ptr = std::unique_ptr<VmafQualityRunner>(new VmafQualityRunner(mp_ctx->model_path));
     }
     return runner_ptr;
 }

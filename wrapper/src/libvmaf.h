@@ -145,7 +145,7 @@ public:
 class VmafQualityRunnerFactory {
 public:
     static std::unique_ptr<IVmafQualityRunner> 
-        createVmafQualityRunner(const char *model_path, bool enable_conf_interval);
+        createVmafQualityRunner(ModelPredictionContext *mp_ctx);
 };
 
 #endif

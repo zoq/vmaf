@@ -1072,31 +1072,6 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
     }
 
     Asset asset(vmafContext->width, vmafContext->height, vmafContext->format);
-    std::unique_ptr<IVmafQualityRunner> runner_ptr = VmafQualityRunnerFactory::createVmafQualityRunner(vmafContext->model_path, vmafContext->enable_conf_interval);
-
-    Timer timer;
-    timer.start();
-    Result result;
-
-    // feature extraction
-    VmafQualityRunner::feature_extract(result, asset, read_frame, user_data, vmafContext);
-
-    // only used in aggregation
-    // pool_method
-
-    // unique to each model (default/additional)
-    // enable_conf_interval
-    // disable clip
-    // enable_transform
-    // model_path
-    // model_name
-
-    // only used in feature extraction
-    // do_psnr
-    // do_ssim
-    // do_ms_ssim
-    // n_threads
-    // disable_avx
 
     ModelPredictionContext *mp_ctx;
     mp_ctx = (ModelPredictionContext *)malloc(sizeof(ModelPredictionContext));
@@ -1107,13 +1082,28 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
     mp_ctx->enable_transform = vmafContext->enable_transform;
     mp_ctx->disable_clip = vmafContext->disable_clip;
 
+    std::unique_ptr<IVmafQualityRunner> runner_ptr = VmafQualityRunnerFactory::createVmafQualityRunner(mp_ctx);
+
+    Timer timer;
+    timer.start();
+    Result result;
+
+    // feature extraction
+    VmafQualityRunner::feature_extract(result, asset, read_frame, user_data, vmafContext);
+
     // predict using baseline VMAF model
     runner_ptr->predict(result, mp_ctx);
 
+    free(mp_ctx);
+
     // predict using additional models, if any
+    std::vector<AdditionalModelStruct> additional_model_structs;
     if (vmafContext->additional_model_paths != NULL) {
 
-        std::vector<AdditionalModelStruct> additional_model_structs = _get_additional_model_structs(vmafContext->additional_model_paths);
+        ModelPredictionContext *additional_mp_ctx;
+        additional_mp_ctx = (ModelPredictionContext *)malloc(sizeof(ModelPredictionContext));
+
+        additional_model_structs = _get_additional_model_structs(vmafContext->additional_model_paths);
 
         int num_additional_models = additional_model_structs.size();
 
@@ -1123,23 +1113,22 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         // predict using additional models, if any
         for (int additional_model_ind = 0; additional_model_ind < num_additional_models; additional_model_ind++) {
 
-            std::unique_ptr<IVmafQualityRunner> additional_runner_ptr =
-                VmafQualityRunnerFactory::createVmafQualityRunner(additional_model_structs.at(additional_model_ind).model_path.c_str(),
-                    additional_model_structs.at(additional_model_ind).enable_conf_interval);
+            additional_mp_ctx->model_name = additional_model_structs.at(additional_model_ind).model_name.c_str();
+            additional_mp_ctx->model_path = additional_model_structs.at(additional_model_ind).model_path.c_str();
+            additional_mp_ctx->enable_conf_interval = additional_model_structs.at(additional_model_ind).enable_conf_interval;
+            additional_mp_ctx->enable_transform = additional_model_structs.at(additional_model_ind).enable_transform;
+            additional_mp_ctx->disable_clip = additional_model_structs.at(additional_model_ind).disable_clip;
 
-            mp_ctx->model_name = additional_model_structs.at(additional_model_ind).model_name.c_str();
-            mp_ctx->model_path = additional_model_structs.at(additional_model_ind).model_path.c_str();
-            mp_ctx->enable_conf_interval = vmafContext->enable_conf_interval;
-            mp_ctx->enable_transform = additional_model_structs.at(additional_model_ind).enable_transform;
-            mp_ctx->disable_clip = additional_model_structs.at(additional_model_ind).disable_clip;
+            std::unique_ptr<IVmafQualityRunner> additional_runner_ptr = VmafQualityRunnerFactory::createVmafQualityRunner(additional_mp_ctx);
 
-            additional_runner_ptr->predict(result, mp_ctx);
+            // predict using additional model
+            additional_runner_ptr->predict(result, additional_mp_ctx);
 
         }
 
-    }
+        free(additional_mp_ctx);
 
-    free(mp_ctx);
+    }
 
     timer.stop();
 
@@ -1223,7 +1212,6 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
 
     // print out additional models (if any)
     if (vmafContext->additional_model_paths != NULL) {
-        std::vector<AdditionalModelStruct> additional_model_structs = _get_additional_model_structs(vmafContext->additional_model_paths);
         int num_additional_models = additional_model_structs.size();
         for (int additional_model_ind = 0; additional_model_ind < num_additional_models; additional_model_ind++)
         {
