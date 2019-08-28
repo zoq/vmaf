@@ -769,6 +769,7 @@ void VmafQualityRunner::feature_extract(Result &result, Asset asset, int (*read_
     StatVector adm_scale0, adm_scale1, adm_scale2, adm_scale3;
     StatVector psnr, ssim, ms_ssim;
 
+    int num_frms_subsampled = 0;
     for (size_t i = 0; i < num_frms; i += vmafContext->n_subsample) {
         adm2.append(
                 (get_at(&adm_num_array, i) + ADM2_CONSTANT)
@@ -810,6 +811,8 @@ void VmafQualityRunner::feature_extract(Result &result, Asset asset, int (*read_
         if (ms_ssim_array_ptr != NULL) {
             ms_ssim.append(get_at(&ms_ssim_array, i));
         }
+
+        num_frms_subsampled += 1;
     }
 
     result = {};
@@ -826,7 +829,7 @@ void VmafQualityRunner::feature_extract(Result &result, Asset asset, int (*read_
     result.set_scores("vif", vif);
     result.set_scores("motion2", motion2);
 
-    result.set_num_frms(num_frms);
+    result.set_num_frms(num_frms_subsampled);
 
     if (psnr_array_ptr != NULL) {
         result.set_scores("psnr", psnr);
@@ -865,20 +868,17 @@ void VmafQualityRunner::feature_extract(Result &result, Asset asset, int (*read_
 
 }
 
-void VmafQualityRunner::predict(Result &result, const char *model_path, std::string model_name,
-    bool enable_transform, bool disable_clip, int n_subsample)
+void VmafQualityRunner::predict(Result &result, ModelPredictionContext *mp_ctx)
 {
-    int num_frms = result.get_num_frms();
-
     dbg_printf("Normalize features, SVM regression, denormalize score, clip...\n");
-    size_t num_frms_subsampled = 0;
-    for (size_t i = 0; i < num_frms; i += n_subsample) {
-        num_frms_subsampled++;
-    }
 
-    std::unique_ptr<LibsvmNusvrTrainTestModel> model_ptr = _load_model(model_path);
+    int num_frms_subsampled = result.get_num_frms();
+
+    // load model
+    std::unique_ptr<LibsvmNusvrTrainTestModel> model_ptr = _load_model(mp_ctx->model_path);
     LibsvmNusvrTrainTestModel& model = *model_ptr;
 
+    // verify that all feature names in the loaded model are valid
     for (size_t j = 0; j < model.feature_names.length(); j++) {
 
         if ((strcmp(Stringize(model.feature_names[j]).c_str(),
@@ -914,9 +914,9 @@ void VmafQualityRunner::predict(Result &result, const char *model_path, std::str
     std::vector<VmafPredictionStruct> predictionStructs;
 
     _normalize_predict_denormalize_transform_clip(model, num_frms_subsampled, result,
-        enable_transform, disable_clip, predictionStructs);
+        mp_ctx->enable_transform, mp_ctx->disable_clip, predictionStructs);
 
-    _set_prediction_result(predictionStructs, result, model_name);
+    _set_prediction_result(predictionStructs, result, mp_ctx->model_name);
 
 }
 
@@ -1081,9 +1081,34 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
     // feature extraction
     VmafQualityRunner::feature_extract(result, asset, read_frame, user_data, vmafContext);
 
+    // only used in aggregation
+    // pool_method
+
+    // unique to each model (default/additional)
+    // enable_conf_interval
+    // disable clip
+    // enable_transform
+    // model_path
+    // model_name
+
+    // only used in feature extraction
+    // do_psnr
+    // do_ssim
+    // do_ms_ssim
+    // n_threads
+    // disable_avx
+
+    ModelPredictionContext *mp_ctx;
+    mp_ctx = (ModelPredictionContext *)malloc(sizeof(ModelPredictionContext));
+
+    mp_ctx->model_name = "vmaf";
+    mp_ctx->model_path = vmafContext->model_path;
+    mp_ctx->enable_conf_interval = vmafContext->enable_conf_interval;
+    mp_ctx->enable_transform = vmafContext->enable_transform;
+    mp_ctx->disable_clip = vmafContext->disable_clip;
+
     // predict using baseline VMAF model
-    runner_ptr->predict(result, vmafContext->model_path, "vmaf", vmafContext->enable_transform,
-        vmafContext->disable_clip, vmafContext->n_subsample);
+    runner_ptr->predict(result, mp_ctx);
 
     // predict using additional models, if any
     if (vmafContext->additional_model_paths != NULL) {
@@ -1102,16 +1127,19 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
                 VmafQualityRunnerFactory::createVmafQualityRunner(additional_model_structs.at(additional_model_ind).model_path.c_str(),
                     additional_model_structs.at(additional_model_ind).enable_conf_interval);
 
-            additional_runner_ptr->predict(result,
-                additional_model_structs.at(additional_model_ind).model_path.c_str(),
-                additional_model_structs.at(additional_model_ind).model_name,
-                additional_model_structs.at(additional_model_ind).enable_transform,
-                additional_model_structs.at(additional_model_ind).disable_clip,
-                vmafContext->n_subsample);
+            mp_ctx->model_name = additional_model_structs.at(additional_model_ind).model_name.c_str();
+            mp_ctx->model_path = additional_model_structs.at(additional_model_ind).model_path.c_str();
+            mp_ctx->enable_conf_interval = vmafContext->enable_conf_interval;
+            mp_ctx->enable_transform = additional_model_structs.at(additional_model_ind).enable_transform;
+            mp_ctx->disable_clip = additional_model_structs.at(additional_model_ind).disable_clip;
+
+            additional_runner_ptr->predict(result, mp_ctx);
 
         }
 
     }
+
+    free(mp_ctx);
 
     timer.stop();
 

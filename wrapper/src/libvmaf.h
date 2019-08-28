@@ -33,18 +33,10 @@ extern "C" {
 #endif
 
 typedef struct {
-
     int width;
     int height;
-    char *format;
-    char *model_path;
-    char *additional_model_paths;
-    char *log_path;
-    char *log_fmt;
-
     int n_thread;
     int n_subsample;
-    char *pool_method;
     int disable_clip;
     int disable_avx;
     int enable_transform;
@@ -53,8 +45,22 @@ typedef struct {
     int do_ssim;
     int do_ms_ssim;
     int enable_conf_interval;
-
+    char *format;
+    char *model_path;
+    char *additional_model_paths;
+    char *log_path;
+    char *log_fmt;
+    char *pool_method;
 } VmafContext;
+
+struct ModelPredictionContext
+{
+    int enable_conf_interval;
+    int enable_transform;
+    int disable_clip;
+    const char *model_name;
+    const char *model_path;
+};
 
 int compute_vmaf(double* vmaf_score, int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride_byte, void *user_data),
 				 void *user_data, VmafContext *vmafContext);
@@ -132,7 +138,7 @@ private:
 
 class IVmafQualityRunner {
 public:
-    virtual void predict(Result &result, const char *model_path, std::string model_name, bool enable_transform, bool disable_clip, int n_subsample) = 0;
+    virtual void predict(Result &result, ModelPredictionContext *mp_ctx) = 0;
     virtual ~IVmafQualityRunner() {}
 };
 
