@@ -865,19 +865,18 @@ void VmafQualityRunner::feature_extract(Result &result, Asset asset, int (*read_
 
 }
 
-void VmafQualityRunner::run(Result &result, Asset asset, int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
-                       int stride, void *user_data), void *user_data, VmafContext *vmafContext)
+void VmafQualityRunner::predict(Result &result, const char *model_path, std::string model_name,
+    bool enable_transform, bool disable_clip, int n_subsample)
 {
-
     int num_frms = result.get_num_frms();
 
     dbg_printf("Normalize features, SVM regression, denormalize score, clip...\n");
     size_t num_frms_subsampled = 0;
-    for (size_t i = 0; i < num_frms; i += vmafContext->n_subsample) {
+    for (size_t i = 0; i < num_frms; i += n_subsample) {
         num_frms_subsampled++;
     }
 
-    std::unique_ptr<LibsvmNusvrTrainTestModel> model_ptr = _load_model(vmafContext->model_path);
+    std::unique_ptr<LibsvmNusvrTrainTestModel> model_ptr = _load_model(model_path);
     LibsvmNusvrTrainTestModel& model = *model_ptr;
 
     for (size_t j = 0; j < model.feature_names.length(); j++) {
@@ -915,41 +914,9 @@ void VmafQualityRunner::run(Result &result, Asset asset, int (*read_frame)(float
     std::vector<VmafPredictionStruct> predictionStructs;
 
     _normalize_predict_denormalize_transform_clip(model, num_frms_subsampled, result,
-        vmafContext->enable_transform, vmafContext->disable_clip, predictionStructs);
+        enable_transform, disable_clip, predictionStructs);
 
-    _set_prediction_result(predictionStructs, result, "vmaf");
-
-//    // read additional models, if any
-//    if (vmafContext->additional_model_paths != NULL) {
-//
-//        std::vector<AdditionalModelStruct> additional_model_structs = _get_additional_model_structs(vmafContext->additional_model_paths);
-//
-//        int num_additional_models = additional_model_structs.size();
-//
-//        std::vector<VmafPredictionStruct> additional_prediction_struct;
-//        std::unique_ptr<LibsvmNusvrTrainTestModel> additional_model_ptr;
-//
-//        // predict using additional models, if any (calculate with and without enable_transform)
-//        for (int additional_model_ind = 0; additional_model_ind < num_additional_models; additional_model_ind++) {
-//
-//            additional_model_ptr = _load_model(additional_model_structs.at(additional_model_ind).model_path.c_str());
-//            LibsvmNusvrTrainTestModel& additional_model = *additional_model_ptr;
-//
-//            _normalize_predict_denormalize_transform_clip(additional_model, num_frms_subsampled,
-//                adm2, adm_scale0, adm_scale1, adm_scale2, adm_scale3, motion,
-//                vif_scale0, vif_scale1, vif_scale2, vif_scale3, vif, motion2,
-//                additional_model_structs.at(additional_model_ind).enable_transform,
-//                additional_model_structs.at(additional_model_ind).disable_clip,
-//                additional_prediction_struct);
-//
-//            _set_prediction_result(additional_prediction_struct, result, additional_model_structs.at(additional_model_ind).model_name);
-//
-//            // clean up
-//            additional_prediction_struct.clear();
-//
-//        }
-//
-//    }
+    _set_prediction_result(predictionStructs, result, model_name);
 
 }
 
@@ -1110,8 +1077,42 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
     Timer timer;
     timer.start();
     Result result;
+
+    // feature extraction
     VmafQualityRunner::feature_extract(result, asset, read_frame, user_data, vmafContext);
-    runner_ptr->run(result, asset, read_frame, user_data, vmafContext);
+
+    // predict using baseline VMAF model
+    runner_ptr->predict(result, vmafContext->model_path, "vmaf", vmafContext->enable_transform,
+        vmafContext->disable_clip, vmafContext->n_subsample);
+
+    // predict using additional models, if any
+    if (vmafContext->additional_model_paths != NULL) {
+
+        std::vector<AdditionalModelStruct> additional_model_structs = _get_additional_model_structs(vmafContext->additional_model_paths);
+
+        int num_additional_models = additional_model_structs.size();
+
+        std::vector<VmafPredictionStruct> additional_prediction_struct;
+        std::unique_ptr<LibsvmNusvrTrainTestModel> additional_model_ptr;
+
+        // predict using additional models, if any
+        for (int additional_model_ind = 0; additional_model_ind < num_additional_models; additional_model_ind++) {
+
+            std::unique_ptr<IVmafQualityRunner> additional_runner_ptr =
+                VmafQualityRunnerFactory::createVmafQualityRunner(additional_model_structs.at(additional_model_ind).model_path.c_str(),
+                    additional_model_structs.at(additional_model_ind).enable_conf_interval);
+
+            additional_runner_ptr->predict(result,
+                additional_model_structs.at(additional_model_ind).model_path.c_str(),
+                additional_model_structs.at(additional_model_ind).model_name,
+                additional_model_structs.at(additional_model_ind).enable_transform,
+                additional_model_structs.at(additional_model_ind).disable_clip,
+                vmafContext->n_subsample);
+
+        }
+
+    }
+
     timer.stop();
 
     if (vmafContext->pool_method != NULL && (strcmp(vmafContext->pool_method, "min")==0))

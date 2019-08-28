@@ -128,8 +128,7 @@ public:
     VmafQualityRunner(const char *model_path): model_path(model_path) {}
     static void feature_extract(Result &result, Asset asset, int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
                int stride, void *user_data), void *user_data, VmafContext *vmafContext);
-    virtual void run(Result &result, Asset asset, int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
-               int stride, void *user_data), void *user_data, VmafContext *vmafContext);
+    virtual void predict(Result &result, const char *model_path, std::string model_name, bool enable_transform, bool disable_clip, int n_subsample);
     virtual ~VmafQualityRunner() {}
 protected:
     static void _transform_value(LibsvmNusvrTrainTestModel& model, double& prediction);

@@ -682,14 +682,13 @@ class VmafossExecQualityRunner(QualityRunner):
         # augment the feature set, if there are any additional models passed in
         if additional_models_dict:
             self.FEATURES += additional_models_dict.keys()
-            # augment also with transformed scores
-            self.FEATURES += map(lambda k: "{k}_transformed".format(k=k), additional_models_dict.keys())
-            if ci:
-                # if ci, augment feature set with bagging, stddev, ci95_low and ci95_high
-                self.FEATURES += map(lambda k: "{k}_bagging".format(k=k), additional_models_dict.keys())
-                self.FEATURES += map(lambda k: "{k}_stddev".format(k=k), additional_models_dict.keys())
-                self.FEATURES += map(lambda k: "{k}_ci95_low".format(k=k), additional_models_dict.keys())
-                self.FEATURES += map(lambda k: "{k}_ci95_high".format(k=k), additional_models_dict.keys())
+            # if ci is on for a model, augment feature set with this model's bagging, stddev, ci95_low and ci95_high scores
+            for key in additional_models_dict.keys():
+                if additional_models_dict[key]["enable_conf_interval"] == "1":
+                    self.FEATURES.append("{k}_bagging".format(k=key))
+                    self.FEATURES.append("{k}_stddev".format(k=key))
+                    self.FEATURES.append("{k}_ci95_low".format(k=key))
+                    self.FEATURES.append("{k}_ci95_high".format(k=key))
             # get json string for additional models
             additional_models = self.get_json_additional_model_string(additional_models_dict)
 

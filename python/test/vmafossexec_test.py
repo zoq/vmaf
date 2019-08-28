@@ -247,7 +247,7 @@ class VmafossexecQualityRunnerTest(unittest.TestCase):
             None, fifo_mode=True,
             delete_workdir=True,
             result_store=None,
-            optional_dict={'model_filepath': VmafConfig.model_path('vmaf_b_v0.6.3', 'vmaf_b_v0.6.3.pkl'),
+            optional_dict={'model_filepath': VmafConfig.model_path('vmaf_v0.6.1.pkl'),
                            'additional_models': {'vmaf_2': {"model_path": VmafConfig.model_path('vmaf_b_v0.6.3', 'vmaf_b_v0.6.3.pkl'), "enable_conf_interval": "1"},
                                                  'vmaf_rb_v0.6.2': {"model_path": VmafConfig.model_path('vmaf_rb_v0.6.2', 'vmaf_rb_v0.6.2.pkl'), "enable_conf_interval": "1"},
                                                  'vmaf_rb_v0.6.3': {"model_path": VmafConfig.model_path('vmaf_rb_v0.6.3', 'vmaf_rb_v0.6.3.pkl'), "enable_conf_interval": "1"},
@@ -257,7 +257,22 @@ class VmafossexecQualityRunnerTest(unittest.TestCase):
 
         results = self.runner.results
 
-        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_score'], 75.44304862545658, places=3)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vif_scale0_score'],0.363420458333, places=4)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vif_scale1_score'], 0.766647520833, places=4)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vif_scale2_score'], 0.862854708333, places=4)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vif_scale3_score'], 0.915971791667, places=4)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_adm_scale0_score'], 0.9079192708333332, places=4)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_adm_scale1_score'], 0.8939565625, places=4)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_adm_scale2_score'], 0.9301004166666665, places=4)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_adm_scale3_score'], 0.9650352708333333, places=4)
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_motion_score'], 4.0498256249999995, places=4)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_motion2_score'], 3.8953518541666665, places=4)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_adm2_score'], 0.93458777083333333, places=4)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_psnr_score'], 30.7550666667, places=4)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_ssim_score'], 0.86322654166666657, places=4)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_ms_ssim_score'], 0.9632498125, places=4)
+
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_score'], 76.69926875, places=3)
 
         self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_2_bagging_score'], 74.96365833333334, places=3)
         self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_2_stddev_score'], 1.3128927083333333, places=3)
@@ -269,7 +284,7 @@ class VmafossexecQualityRunnerTest(unittest.TestCase):
         self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_4k_rb_v0.6.2_ci95_low_score'], 82.76451250000001, places=3)
         self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_4k_rb_v0.6.2_ci95_high_score'], 85.85374791666668, places=3)
 
-        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_score'], 99.95804791666667, places=4)
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_score'], 99.94641666666666, places=4)
 
         self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_2_bagging_score'], 99.93908333333333, places=3)
         self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_2_stddev_score'], 0.09930395833333333, places=3)
@@ -284,6 +299,56 @@ class VmafossexecQualityRunnerTest(unittest.TestCase):
         self.assertEquals(results[0]['VMAFOSSEXEC_vmaf_rb_v0.6.3_bootstrap_0001_scores'], results[0]['VMAFOSSEXEC_vmaf_rb_v0.6.2_bootstrap_0001_scores'])
         self.assertEquals(results[0]['VMAFOSSEXEC_vmaf_rb_v0.6.3_bootstrap_0019_scores'], results[0]['VMAFOSSEXEC_vmaf_rb_v0.6.2_bootstrap_0019_scores'])
         self.assertEquals(results[1]['VMAFOSSEXEC_vmaf_rb_v0.6.3_bootstrap_0019_scores'], results[1]['VMAFOSSEXEC_vmaf_rb_v0.6.2_bootstrap_0019_scores'])
+
+    def test_run_vmafossexec_runner_additional_models_use_ci_et_mix_match(self):
+        print('test on running VMAFOSSEXEC runner with additional models and ci...')
+        ref_path, dis_path, asset, asset_original = set_default_576_324_videos_for_testing()
+
+        self.runner = VmafossExecQualityRunner(
+            [asset, asset_original],
+            None, fifo_mode=True,
+            delete_workdir=True,
+            result_store=None,
+            optional_dict={'model_filepath': VmafConfig.model_path('vmaf_v0.6.1.pkl'),
+                           'additional_models': {'vmaf_061_wo_ci_wo_et': {'model_path': VmafConfig.model_path('vmaf_v0.6.1.pkl'), 'enable_conf_interval': '0', 'enable_transform': '0'},
+                                                 'vmaf_061_wo_ci_w_et': {'model_path': VmafConfig.model_path('vmaf_v0.6.1.pkl'), 'enable_conf_interval': '0', 'enable_transform': '1'},
+                                                 'vmaf_b063_w_ci_wo_et': {'model_path': VmafConfig.model_path('vmaf_b_v0.6.3', 'vmaf_b_v0.6.3.pkl'), "enable_conf_interval": '1', 'enable_transform': '0'},
+                                                 'vmaf_b063_w_ci_w_et': {'model_path': VmafConfig.model_path('vmaf_b_v0.6.3', 'vmaf_b_v0.6.3.pkl'),"enable_conf_interval": '1', 'enable_transform': '1'}}
+                           }
+        )
+        self.runner.run()
+
+        results = self.runner.results
+
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_score'], 76.69926875, places=3)
+
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_061_wo_ci_wo_et_score'], 76.69926875, places=3)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_061_wo_ci_w_et_score'], 92.54239166666667, places=3)
+
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_b063_w_ci_wo_et_bagging_score'], 74.96365833333334, places=3)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_b063_w_ci_wo_et_stddev_score'], 1.3128927083333333, places=3)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_b063_w_ci_wo_et_ci95_low_score'], 72.98503333333333, places=3)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_b063_w_ci_wo_et_ci95_high_score'], 77.38652708333333, places=3)
+
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_b063_w_ci_w_et_bagging_score'], 91.40493125, places=3)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_b063_w_ci_w_et_stddev_score'], 0.8773241874999999, places=3)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_b063_w_ci_w_et_ci95_low_score'], 90.05703125000001, places=3)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_b063_w_ci_w_et_ci95_high_score'], 92.98213541666667, places=3)
+
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_score'], 99.94641666666666, places=4)
+
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_061_wo_ci_wo_et_score'], 99.94641666666666, places=3)
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_061_wo_ci_w_et_score'], 100.0, places=3)
+
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_b063_w_ci_wo_et_bagging_score'], 99.93908333333333, places=3)
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_b063_w_ci_wo_et_stddev_score'], 0.09930395833333333, places=3)
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_b063_w_ci_wo_et_ci95_low_score'], 91.11520624999999, places=3)
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_b063_w_ci_wo_et_ci95_high_score'], 100.0, places=3)
+
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_b063_w_ci_w_et_bagging_score'], 100.0, places=3)
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_b063_w_ci_w_et_stddev_score'], 0.0, places=3)
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_b063_w_ci_w_et_ci95_low_score'], 99.94739583333332, places=3)
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_b063_w_ci_w_et_ci95_high_score'], 100.0, places=3)
 
     def test_run_vmafossexec_runner_with_additional_model_use_ci_et(self):
         print('test on running VMAFOSSEXEC runner with additional models and ci and enable transform...')

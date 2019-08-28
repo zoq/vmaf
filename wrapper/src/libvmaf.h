@@ -132,8 +132,7 @@ private:
 
 class IVmafQualityRunner {
 public:
-    virtual void run(Result &result, Asset asset, int(*read_frame)(float *ref_data, float *main_data, float *temp_data,
-        int stride, void *user_data), void *user_data, VmafContext *vmafContext) = 0;
+    virtual void predict(Result &result, const char *model_path, std::string model_name, bool enable_transform, bool disable_clip, int n_subsample) = 0;
     virtual ~IVmafQualityRunner() {}
 };
 
