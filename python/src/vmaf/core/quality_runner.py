@@ -684,7 +684,8 @@ class VmafossExecQualityRunner(QualityRunner):
             self.FEATURES += additional_models_dict.keys()
             # if ci is on for a model, augment feature set with this model's bagging, stddev, ci95_low and ci95_high scores
             for key in additional_models_dict.keys():
-                if additional_models_dict[key]["enable_conf_interval"] == "1":
+                if "enable_conf_interval" in additional_models_dict[key] and \
+                        additional_models_dict[key]["enable_conf_interval"] == "1":
                     self.FEATURES.append("{k}_bagging".format(k=key))
                     self.FEATURES.append("{k}_stddev".format(k=key))
                     self.FEATURES.append("{k}_ci95_low".format(k=key))
