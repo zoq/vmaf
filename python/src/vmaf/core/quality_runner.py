@@ -690,11 +690,6 @@ class VmafossExecQualityRunner(QualityRunner):
                 self.FEATURES += map(lambda k: "{k}_stddev".format(k=k), additional_models_dict.keys())
                 self.FEATURES += map(lambda k: "{k}_ci95_low".format(k=k), additional_models_dict.keys())
                 self.FEATURES += map(lambda k: "{k}_ci95_high".format(k=k), additional_models_dict.keys())
-                # augment with transformed scores too
-                self.FEATURES += map(lambda k: "{k}_transformed_bagging".format(k=k), additional_models_dict.keys())
-                self.FEATURES += map(lambda k: "{k}_transformed_stddev".format(k=k), additional_models_dict.keys())
-                self.FEATURES += map(lambda k: "{k}_transformed_ci95_low".format(k=k), additional_models_dict.keys())
-                self.FEATURES += map(lambda k: "{k}_transformed_ci95_high".format(k=k), additional_models_dict.keys())
             # get json string for additional models
             additional_models = self.get_json_additional_model_string(additional_models_dict)
 
@@ -716,12 +711,17 @@ class VmafossExecQualityRunner(QualityRunner):
 
     @staticmethod
     def get_json_additional_model_string(d):
-        """ Returns json string representation with sorted keys for additional models.
-        get_json_additional_model_string({"model A": "/someA/pthA/forA/A.pkl", "model B": "/someB/pthB/forB/B.pkl"})
+        """
+        Returns json string representation with sorted keys for additional models.
         """
         if d:
-            return "{{{0}}}".format('\\,'.join(map(lambda k: '\\"{k}\\"\\:\\"{v}\\"'
-                                               .format(k=k, v=d[k]), sorted(d.keys()))))
+            s_list = []
+            for key in d.keys():
+                inner_d = d[key]
+                single_model = "{{{0}}}".format('\\,'.join(map(lambda k: '\\"{k}\\"\\:\\"{v}\\"'
+                                                           .format(k=k, v=inner_d[k]), sorted(inner_d.keys()))))
+                s_list.append('\\"{k}\\"\\:{v}'.format(k=key, v=single_model))
+            return "{{{0}}}".format('\\,'.join(s_list))
         else:
             return ""
 

@@ -207,6 +207,16 @@ std::vector<std::string> Result::get_keys()
     return v;
 }
 
+int Result::get_num_frms()
+{
+    return num_frms;
+}
+
+void Result::set_num_frms(int num_frms)
+{
+    this->num_frms = num_frms;
+}
+
 void Result::setScoreAggregateMethod(ScoreAggregateMethod scoreAggregateMethod)
 {
     score_aggregate_method = scoreAggregateMethod;

@@ -122,14 +122,17 @@ public:
     double get_score(const std::string &key);
     std::vector<std::string> get_keys();
     void setScoreAggregateMethod(ScoreAggregateMethod scoreAggregateMethod);
+    int get_num_frms();
+    void set_num_frms(int num_frms);
 private:
     std::map<std::string, StatVector> d;
     ScoreAggregateMethod score_aggregate_method;
+    int num_frms;
 };
 
 class IVmafQualityRunner {
 public:
-    virtual Result run(Asset asset, int(*read_frame)(float *ref_data, float *main_data, float *temp_data,
+    virtual void run(Result &result, Asset asset, int(*read_frame)(float *ref_data, float *main_data, float *temp_data,
         int stride, void *user_data), void *user_data, VmafContext *vmafContext) = 0;
     virtual ~IVmafQualityRunner() {}
 };

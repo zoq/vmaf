@@ -97,7 +97,7 @@ class VmafossexecQualityRunnerTest(unittest.TestCase):
             None, fifo_mode=True,
             delete_workdir=True,
             result_store=None,
-            optional_dict={'additional_models': {"some_model": VmafConfig.model_path("vmaf_v0.6.1.pkl")}}
+            optional_dict={'additional_models': {"some_model": {"model_path": VmafConfig.model_path("vmaf_v0.6.1.pkl")}}}
         )
         self.runner.run()
 
@@ -105,10 +105,29 @@ class VmafossexecQualityRunnerTest(unittest.TestCase):
 
         self.assertAlmostEqual(results[0]['VMAFOSSEXEC_score'], 76.699271272486044, places=3)
         self.assertAlmostEqual(results[0]['VMAFOSSEXEC_some_model_score'], 76.699271272486044, places=3)
-        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_some_model_transformed_score'], 92.54239166666667, places=3)
         self.assertAlmostEqual(results[1]['VMAFOSSEXEC_score'], 99.946416604585025, places=4)
         self.assertAlmostEqual(results[1]['VMAFOSSEXEC_some_model_score'], 99.946416604585025, places=4)
-        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_some_model_transformed_score'], 100.0, places=4)
+
+    def test_run_vmafossexec_runner_with_061_phone_additional_model(self):
+        print('test on running VMAFOSSEXEC runner with 0.6.1 phone as additional model...')
+        ref_path, dis_path, asset, asset_original = set_default_576_324_videos_for_testing()
+
+        self.runner = VmafossExecQualityRunner(
+            [asset, asset_original],
+            None, fifo_mode=True,
+            delete_workdir=True,
+            result_store=None,
+            optional_dict={'additional_models': {"some_model": {"model_path": VmafConfig.model_path("vmaf_v0.6.1.pkl"),
+                                                                "enable_transform": "1"}}}
+        )
+        self.runner.run()
+
+        results = self.runner.results
+
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_score'], 76.699271272486044, places=3)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_some_model_score'], 92.54239166666667, places=3)
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_score'], 99.946416604585025, places=4)
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_some_model_score'], 100.0, places=4)
 
     def test_run_vmafossexec_runner_with_061_additional_models(self):
         print('test on running VMAFOSSEXEC runner with 0.6.1 as additional models...')
@@ -119,8 +138,8 @@ class VmafossexecQualityRunnerTest(unittest.TestCase):
             None, fifo_mode=True,
             delete_workdir=True,
             result_store=None,
-            optional_dict={'additional_models': {"some_model": VmafConfig.model_path("vmaf_v0.6.1.pkl"),
-                                                 "other_model": VmafConfig.model_path("vmaf_v0.6.1.pkl")}}
+            optional_dict={'additional_models': {"some_model": {"model_path": VmafConfig.model_path("vmaf_v0.6.1.pkl")},
+                                                 "other_model": {"model_path": VmafConfig.model_path("vmaf_v0.6.1.pkl")}}}
         )
         self.runner.run()
 
@@ -133,6 +152,30 @@ class VmafossexecQualityRunnerTest(unittest.TestCase):
         self.assertAlmostEqual(results[1]['VMAFOSSEXEC_some_model_score'], 99.946416604585025, places=4)
         self.assertAlmostEqual(results[1]['VMAFOSSEXEC_other_model_score'], 99.946416604585025, places=4)
 
+    def test_run_vmafossexec_runner_with_061_additional_models_one_is_transformed(self):
+        print('test on running VMAFOSSEXEC runner with 0.6.1 as additional models...')
+        ref_path, dis_path, asset, asset_original = set_default_576_324_videos_for_testing()
+
+        self.runner = VmafossExecQualityRunner(
+            [asset, asset_original],
+            None, fifo_mode=True,
+            delete_workdir=True,
+            result_store=None,
+            optional_dict={'additional_models': {"some_model": {"model_path": VmafConfig.model_path("vmaf_v0.6.1.pkl")},
+                                                 "other_model": {"model_path": VmafConfig.model_path("vmaf_v0.6.1.pkl"),
+                                                                 "enable_transform": "1"}}}
+        )
+        self.runner.run()
+
+        results = self.runner.results
+
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_score'], 76.699271272486044, places=3)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_some_model_score'], 76.699271272486044, places=3)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_other_model_score'], 92.54239166666667, places=3)
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_score'], 99.946416604585025, places=4)
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_some_model_score'], 99.946416604585025, places=4)
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_other_model_score'], 100.0, places=4)
+
     def test_run_vmafossexec_runner_with_4k_additional_model(self):
         print('test on running VMAFOSSEXEC runner with 4k as additional model...')
         ref_path, dis_path, asset, asset_original = set_default_576_324_videos_for_testing()
@@ -142,7 +185,7 @@ class VmafossexecQualityRunnerTest(unittest.TestCase):
             None, fifo_mode=True,
             delete_workdir=True,
             result_store=None,
-            optional_dict={'additional_models': {"four_k": VmafConfig.model_path("vmaf_4k_v0.6.1.pkl")}}
+            optional_dict={'additional_models': {"four_k": {"model_path": VmafConfig.model_path("vmaf_4k_v0.6.1.pkl")}}}
         )
         self.runner.run()
 
@@ -153,7 +196,7 @@ class VmafossexecQualityRunnerTest(unittest.TestCase):
         self.assertAlmostEqual(results[1]['VMAFOSSEXEC_score'], 99.946416604585025, places=4)
         self.assertAlmostEqual(results[1]['VMAFOSSEXEC_four_k_score'], 100.0, places=4)
 
-    def test_run_vmafossexec_runner_with_additional_models_ci(self):
+    def test_run_vmafossexec_runner_default_and_additional_model_use_ci(self):
         print('test on running VMAFOSSEXEC runner with additional models and ci...')
         ref_path, dis_path, asset, asset_original = set_default_576_324_videos_for_testing()
 
@@ -163,10 +206,8 @@ class VmafossexecQualityRunnerTest(unittest.TestCase):
             delete_workdir=True,
             result_store=None,
             optional_dict={'model_filepath': VmafConfig.model_path('vmaf_b_v0.6.3', 'vmaf_b_v0.6.3.pkl'),
-                           'additional_models': {'vmaf_2': VmafConfig.model_path('vmaf_b_v0.6.3', 'vmaf_b_v0.6.3.pkl'),
-                                                 'vmaf_rb_v0.6.2': VmafConfig.model_path('vmaf_rb_v0.6.2', 'vmaf_rb_v0.6.2.pkl'),
-                                                 'vmaf_rb_v0.6.3': VmafConfig.model_path('vmaf_rb_v0.6.3', 'vmaf_rb_v0.6.3.pkl'),
-                                                 'vmaf_4k_rb_v0.6.2': VmafConfig.model_path('vmaf_4k_rb_v0.6.2', 'vmaf_4k_rb_v0.6.2.pkl')},
+                           'additional_models': {'vmaf_2': {"model_path": VmafConfig.model_path('vmaf_b_v0.6.3', 'vmaf_b_v0.6.3.pkl'),
+                                                            "enable_conf_interval": "1"}},
                            'ci': True}
         )
         self.runner.run()
@@ -185,17 +226,50 @@ class VmafossexecQualityRunnerTest(unittest.TestCase):
         self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_2_ci95_low_score'], 72.98503333333333, places=3)
         self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_2_ci95_high_score'], 77.38652708333333, places=3)
 
-        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_4k_rb_v0.6.2_bagging_score'], 83.98690625, places=3)
-        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_4k_rb_v0.6.2_stddev_score'], 0.9290704791666666, places=3)
-        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_4k_rb_v0.6.2_ci95_low_score'], 82.76451250000001, places=3)
-        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_4k_rb_v0.6.2_ci95_high_score'], 85.85374791666668, places=3)
-
         self.assertAlmostEqual(results[1]['VMAFOSSEXEC_score'], 99.95804791666667, places=4)
 
         self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_bagging_score'], 99.93908333333333, places=3)
         self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_stddev_score'], 0.09930395833333333, places=3)
         self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_ci95_low_score'], 91.11520624999999, places=3)
         self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_ci95_high_score'], 100.0, places=3)
+
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_2_bagging_score'], 99.93908333333333, places=3)
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_2_stddev_score'], 0.09930395833333333, places=3)
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_2_ci95_low_score'], 91.11520624999999, places=3)
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_2_ci95_high_score'], 100.0, places=3)
+
+    def test_run_vmafossexec_runner_only_additional_models_use_ci(self):
+        print('test on running VMAFOSSEXEC runner with additional models and ci...')
+        ref_path, dis_path, asset, asset_original = set_default_576_324_videos_for_testing()
+
+        self.runner = VmafossExecQualityRunner(
+            [asset, asset_original],
+            None, fifo_mode=True,
+            delete_workdir=True,
+            result_store=None,
+            optional_dict={'model_filepath': VmafConfig.model_path('vmaf_b_v0.6.3', 'vmaf_b_v0.6.3.pkl'),
+                           'additional_models': {'vmaf_2': {"model_path": VmafConfig.model_path('vmaf_b_v0.6.3', 'vmaf_b_v0.6.3.pkl'), "enable_conf_interval": "1"},
+                                                 'vmaf_rb_v0.6.2': {"model_path": VmafConfig.model_path('vmaf_rb_v0.6.2', 'vmaf_rb_v0.6.2.pkl'), "enable_conf_interval": "1"},
+                                                 'vmaf_rb_v0.6.3': {"model_path": VmafConfig.model_path('vmaf_rb_v0.6.3', 'vmaf_rb_v0.6.3.pkl'), "enable_conf_interval": "1"},
+                                                 'vmaf_4k_rb_v0.6.2': {"model_path": VmafConfig.model_path('vmaf_4k_rb_v0.6.2', 'vmaf_4k_rb_v0.6.2.pkl'), "enable_conf_interval": "1"}}}
+        )
+        self.runner.run()
+
+        results = self.runner.results
+
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_score'], 75.44304862545658, places=3)
+
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_2_bagging_score'], 74.96365833333334, places=3)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_2_stddev_score'], 1.3128927083333333, places=3)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_2_ci95_low_score'], 72.98503333333333, places=3)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_2_ci95_high_score'], 77.38652708333333, places=3)
+
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_4k_rb_v0.6.2_bagging_score'], 83.98690625, places=3)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_4k_rb_v0.6.2_stddev_score'], 0.9290704791666666, places=3)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_4k_rb_v0.6.2_ci95_low_score'], 82.76451250000001, places=3)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_4k_rb_v0.6.2_ci95_high_score'], 85.85374791666668, places=3)
+
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_score'], 99.95804791666667, places=4)
 
         self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_2_bagging_score'], 99.93908333333333, places=3)
         self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_2_stddev_score'], 0.09930395833333333, places=3)
@@ -211,7 +285,7 @@ class VmafossexecQualityRunnerTest(unittest.TestCase):
         self.assertEquals(results[0]['VMAFOSSEXEC_vmaf_rb_v0.6.3_bootstrap_0019_scores'], results[0]['VMAFOSSEXEC_vmaf_rb_v0.6.2_bootstrap_0019_scores'])
         self.assertEquals(results[1]['VMAFOSSEXEC_vmaf_rb_v0.6.3_bootstrap_0019_scores'], results[1]['VMAFOSSEXEC_vmaf_rb_v0.6.2_bootstrap_0019_scores'])
 
-    def test_run_vmafossexec_runner_with_additional_models_ci_et(self):
+    def test_run_vmafossexec_runner_with_additional_model_use_ci_et(self):
         print('test on running VMAFOSSEXEC runner with additional models and ci and enable transform...')
         ref_path, dis_path, asset, asset_original = set_default_576_324_videos_for_testing()
 
@@ -221,7 +295,9 @@ class VmafossexecQualityRunnerTest(unittest.TestCase):
             delete_workdir=True,
             result_store=None,
             optional_dict={'model_filepath': VmafConfig.model_path('vmaf_b_v0.6.3', 'vmaf_b_v0.6.3.pkl'),
-                           'additional_models': {'vmaf_2': VmafConfig.model_path('vmaf_b_v0.6.3', 'vmaf_b_v0.6.3.pkl')},
+                           'additional_models': {'vmaf_2': {"model_path": VmafConfig.model_path('vmaf_b_v0.6.3', 'vmaf_b_v0.6.3.pkl'),
+                                                            "enable_conf_interval": "1",
+                                                            "enable_transform": "1"}},
                            'ci': True,
                            'enable_transform_score': True}
         )
@@ -230,29 +306,26 @@ class VmafossexecQualityRunnerTest(unittest.TestCase):
         results = self.runner.results
 
         self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_bagging_score'], 91.40493125, places=3)
-        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_2_transformed_bagging_score'], 91.40493125, places=3)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_2_bagging_score'], 91.40493125, places=3)
         self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_ci95_low_score'], 90.05703125000001, places=3)
-        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_2_transformed_ci95_low_score'], 90.05703125000001, places=3)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_vmaf_2_ci95_low_score'], 90.05703125000001, places=3)
         self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_bagging_score'], 100.0, places=3)
-        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_2_transformed_bagging_score'], 100.0, places=3)
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_vmaf_2_bagging_score'], 100.0, places=3)
 
     def test_additional_model_json_string(self):
         print('test additional model json string creation...')
         self.assertEquals(VmafossExecQualityRunner
                           .get_json_additional_model_string({}), "")
-        self.assertEquals(VmafossExecQualityRunner
-                          .get_json_additional_model_string({"model A": "/someA/pthA/forA/A.pkl"}),
-                          "{\\\"model A\\\"\\:\\\"/someA/pthA/forA/A.pkl\\\"}")
-        self.assertEquals(VmafossExecQualityRunner
-                          .get_json_additional_model_string({"model A": "/someA/pthA/forA/A.pkl",
-                                                             "model B": "/someB/pthB/forB/B.pkl"}),
-                          "{\\\"model A\\\"\\:\\\"/someA/pthA/forA/A.pkl\\\""
-                          "\\,\\\"model B\\\"\\:\\\"/someB/pthB/forB/B.pkl\\\"}")
-        self.assertEquals(VmafossExecQualityRunner
-                          .get_json_additional_model_string({"model B": "/someB/pthB/forB/B.pkl",
-                                                             "model A": "/someA/pthA/forA/A.pkl"}),
-                          "{\\\"model A\\\"\\:\\\"/someA/pthA/forA/A.pkl\\\""
-                          "\\,\\\"model B\\\"\\:\\\"/someB/pthB/forB/B.pkl\\\"}")
+        self.assertEquals(VmafossExecQualityRunner.get_json_additional_model_string({"model A": {"model_path": "/someA/pthA/forA/A.pkl"}}),
+                          '{\\"model A\\"\\:{\\"model_path\\"\\:\\"/someA/pthA/forA/A.pkl\\"}}')
+        self.assertEquals(VmafossExecQualityRunner.get_json_additional_model_string({"model A": {"model_path": "/someA/pthA/forA/A.pkl"}, "model B": {"model_path": "/someB/pthB/forB/B.pkl"}}),
+                          '{\\"model A\\"\\:{\\"model_path\\"\\:\\"/someA/pthA/forA/A.pkl\\"}\\,\\"model B\\"\\:{\\"model_path\\"\\:\\"/someB/pthB/forB/B.pkl\\"}}')
+        self.assertEquals(VmafossExecQualityRunner.get_json_additional_model_string({"model B": {"model_path": "/someB/pthB/forB/B.pkl"}, "model A": {"model_path": "/someA/pthA/forA/A.pkl"}}),
+                          '{\\"model A\\"\\:{\\"model_path\\"\\:\\"/someA/pthA/forA/A.pkl\\"}\\,\\"model B\\"\\:{\\"model_path\\"\\:\\"/someB/pthB/forB/B.pkl\\"}}')
+        self.assertEquals(VmafossExecQualityRunner.get_json_additional_model_string({"model A": {"model_path": "/someA/pthA/forA/A.pkl", "enable_transform": "1"}, "model B": {"model_path": "/someB/pthB/forB/B.pkl"}}),
+                          '{\\"model A\\"\\:{\\"enable_transform\\"\\:\\"1\\"\\,\\"model_path\\"\\:\\"/someA/pthA/forA/A.pkl\\"}\\,\\"model B\\"\\:{\\"model_path\\"\\:\\"/someB/pthB/forB/B.pkl\\"}}')
+        self.assertEquals(VmafossExecQualityRunner.get_json_additional_model_string({"model A": {"model_path": "/someA/pthA/forA/A.pkl", "enable_transform": "1"}, "model B": {"model_path": "/someB/pthB/forB/B.pkl", "disable_clip": "0"}}),
+                          '{\\"model A\\"\\:{\\"enable_transform\\"\\:\\"1\\"\\,\\"model_path\\"\\:\\"/someA/pthA/forA/A.pkl\\"}\\,\\"model B\\"\\:{\\"disable_clip\\"\\:\\"0\\"\\,\\"model_path\\"\\:\\"/someB/pthB/forB/B.pkl\\"}}')
 
     def test_run_vmafossexec_runner_with_subsample(self):
         print('test on running VMAFOSSEXEC runner with subsample...')

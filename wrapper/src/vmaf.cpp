@@ -477,13 +477,24 @@ void VmafQualityRunner::_postproc_transform_clip(
 }
 
 void VmafQualityRunner::_normalize_predict_denormalize_transform_clip(
-        LibsvmNusvrTrainTestModel& model, size_t num_frms,
-        StatVector& adm2, StatVector& adm_scale0, StatVector& adm_scale1,
-        StatVector& adm_scale2, StatVector& adm_scale3, StatVector& motion,
-        StatVector& vif_scale0, StatVector& vif_scale1, StatVector& vif_scale2,
-        StatVector& vif_scale3, StatVector& vif, StatVector& motion2,
+        LibsvmNusvrTrainTestModel& model, size_t num_frms, Result& result,
         bool enable_transform, bool disable_clip,
         std::vector<VmafPredictionStruct>& predictionStructs) {
+
+    StatVector adm2 = result.get_scores("adm2");
+    StatVector adm_scale0 = result.get_scores("adm_scale0");
+    StatVector adm_scale1 = result.get_scores("adm_scale1");
+    StatVector adm_scale2 = result.get_scores("adm_scale2");
+    StatVector adm_scale3 = result.get_scores("adm_scale3");
+
+    StatVector vif = result.get_scores("vif");
+    StatVector vif_scale0 = result.get_scores("vif_scale0");
+    StatVector vif_scale1 = result.get_scores("vif_scale1");
+    StatVector vif_scale2 = result.get_scores("vif_scale2");
+    StatVector vif_scale3 = result.get_scores("vif_scale3");
+
+    StatVector motion = result.get_scores("motion");
+    StatVector motion2 = result.get_scores("motion2");
 
     /* IMPORTANT: always allocate one more spot and put a -1 at the last one's
      * index, so that libsvm will stop looping when seeing the -1 !!!
@@ -550,35 +561,88 @@ void VmafQualityRunner::_set_prediction_result(
     result.set_scores(model_name, score);
 }
 
-AdditionalModelStruct _get_additional_model_struct(char *model_paths)
+void _replace_string_in_place(std::string& subject, const std::string& search,
+                          const std::string& replace) {
+    size_t pos = 0;
+    while ((pos = subject.find(search, pos)) != std::string::npos) {
+         subject.replace(pos, search.length(), replace);
+         pos += replace.length();
+    }
+}
+
+std::vector<AdditionalModelStruct> _get_additional_model_structs(char *model_paths)
 {
     AdditionalModelStruct additional_model_struct;
+    std::vector<AdditionalModelStruct> additional_model_structs;
 
     // read additional models, if any
     if (model_paths != NULL) {
 
+        std::string unknown_option_exception;
+        std::string model_key, model_values;
+        bool use_option;
+
         istringstream is(model_paths);
         Val additional_model_path_val;
+        Val inner_additional_model_path_val;
+
         ReadValFromJSONStream(is, additional_model_path_val);
 
         for (TableIterator kv_pair(additional_model_path_val); kv_pair(); ) {
-            additional_model_struct.model_names.push_back(kv_pair.key());
-            additional_model_struct.model_paths.push_back(kv_pair.value());
+
+            // each model corresponds to a key-value pair
+            // the value corresponds to a dictionary as well that we parse
+
+            additional_model_struct.model_name = GetString(kv_pair.key());
+
+            // set defaults
+            additional_model_struct.enable_transform = false;
+            additional_model_struct.enable_conf_interval = false;
+            additional_model_struct.disable_clip = false;
+            additional_model_struct.model_path = ""; // should be filled up correctly below
+
+            model_values = GetString(kv_pair.value());
+
+            // replace single quotes with double quotes and extra spaces added by parser
+            _replace_string_in_place(model_values, "'", "\"");
+            _replace_string_in_place(model_values, " ", "");
+
+            istringstream inner_is(model_values.c_str());
+            ReadValFromJSONStream(inner_is, inner_additional_model_path_val);
+
+            for (TableIterator inner_kv_pair(inner_additional_model_path_val); inner_kv_pair(); ) {
+
+                use_option = GetString(inner_kv_pair.value()) == "1";
+
+                if (GetString(inner_kv_pair.key()) == "model_path") {
+                    additional_model_struct.model_path = GetString(inner_kv_pair.value());
+                }
+                else if (GetString(inner_kv_pair.key()) == "enable_transform") {
+                    additional_model_struct.enable_transform = use_option;
+                }
+                else if (GetString(inner_kv_pair.key()) == "enable_conf_interval"){
+                    additional_model_struct.enable_conf_interval = use_option;
+                }
+                else if (GetString(inner_kv_pair.key()) == "disable_clip") {
+                    additional_model_struct.disable_clip = use_option;
+                }
+                else {
+                    unknown_option_exception = "Additional model option " + GetString(inner_kv_pair.key()) + " is unknown.";
+                    throw VmafException(unknown_option_exception.c_str());
+                }
+            }
+
+            // add model struct to vector of model structs
+            additional_model_structs.push_back(additional_model_struct);
         }
 
-        additional_model_struct.num_models = additional_model_struct.model_names.size();
-
     }
-    return additional_model_struct;
+    return additional_model_structs;
 }
 
-Result VmafQualityRunner::run(Asset asset, int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
+void VmafQualityRunner::feature_extract(Result &result, Asset asset, int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
                        int stride, void *user_data), void *user_data, VmafContext *vmafContext)
 {
-
-    std::unique_ptr<LibsvmNusvrTrainTestModel> model_ptr = _load_model(vmafContext->model_path);
-    LibsvmNusvrTrainTestModel& model = *model_ptr;
-
     dbg_printf("Initialize storage arrays...\n");
     int w = asset.getWidth();
     int h = asset.getHeight();
@@ -704,7 +768,7 @@ Result VmafQualityRunner::run(Asset asset, int (*read_frame)(float *ref_data, fl
             vif, motion2;
     StatVector adm_scale0, adm_scale1, adm_scale2, adm_scale3;
     StatVector psnr, ssim, ms_ssim;
-    std::vector<VmafPredictionStruct> predictionStructs;
+
     for (size_t i = 0; i < num_frms; i += vmafContext->n_subsample) {
         adm2.append(
                 (get_at(&adm_num_array, i) + ADM2_CONSTANT)
@@ -747,18 +811,8 @@ Result VmafQualityRunner::run(Asset asset, int (*read_frame)(float *ref_data, fl
             ms_ssim.append(get_at(&ms_ssim_array, i));
         }
     }
-    dbg_printf(
-            "Normalize features, SVM regression, denormalize score, clip...\n");
-    size_t num_frms_subsampled = 0;
-    for (size_t i = 0; i < num_frms; i += vmafContext->n_subsample) {
-        num_frms_subsampled++;
-    }
-    _normalize_predict_denormalize_transform_clip(model, num_frms_subsampled,
-            adm2, adm_scale0, adm_scale1, adm_scale2, adm_scale3, motion,
-            vif_scale0, vif_scale1, vif_scale2, vif_scale3, vif, motion2,
-            vmafContext->enable_transform, vmafContext->disable_clip, predictionStructs);
 
-    Result result { };
+    result = {};
     result.set_scores("adm2", adm2);
     result.set_scores("adm_scale0", adm_scale0);
     result.set_scores("adm_scale1", adm_scale1);
@@ -771,6 +825,60 @@ Result VmafQualityRunner::run(Asset asset, int (*read_frame)(float *ref_data, fl
     result.set_scores("vif_scale3", vif_scale3);
     result.set_scores("vif", vif);
     result.set_scores("motion2", motion2);
+
+    result.set_num_frms(num_frms);
+
+    if (psnr_array_ptr != NULL) {
+        result.set_scores("psnr", psnr);
+    }
+    if (ssim_array_ptr != NULL) {
+        result.set_scores("ssim", ssim);
+    }
+    if (ms_ssim_array_ptr != NULL) {
+        result.set_scores("ms_ssim", ms_ssim);
+    }
+
+    free_array(&adm_num_array);
+    free_array(&adm_den_array);
+    free_array(&adm_num_scale0_array);
+    free_array(&adm_den_scale0_array);
+    free_array(&adm_num_scale1_array);
+    free_array(&adm_den_scale1_array);
+    free_array(&adm_num_scale2_array);
+    free_array(&adm_den_scale2_array);
+    free_array(&adm_num_scale3_array);
+    free_array(&adm_den_scale3_array);
+    free_array(&motion_array);
+    free_array(&motion2_array);
+    free_array(&vif_num_scale0_array);
+    free_array(&vif_den_scale0_array);
+    free_array(&vif_num_scale1_array);
+    free_array(&vif_den_scale1_array);
+    free_array(&vif_num_scale2_array);
+    free_array(&vif_den_scale2_array);
+    free_array(&vif_num_scale3_array);
+    free_array(&vif_den_scale3_array);
+    free_array(&vif_array);
+    free_array(&psnr_array);
+    free_array(&ssim_array);
+    free_array(&ms_ssim_array);
+
+}
+
+void VmafQualityRunner::run(Result &result, Asset asset, int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
+                       int stride, void *user_data), void *user_data, VmafContext *vmafContext)
+{
+
+    int num_frms = result.get_num_frms();
+
+    dbg_printf("Normalize features, SVM regression, denormalize score, clip...\n");
+    size_t num_frms_subsampled = 0;
+    for (size_t i = 0; i < num_frms; i += vmafContext->n_subsample) {
+        num_frms_subsampled++;
+    }
+
+    std::unique_ptr<LibsvmNusvrTrainTestModel> model_ptr = _load_model(vmafContext->model_path);
+    LibsvmNusvrTrainTestModel& model = *model_ptr;
 
     for (size_t j = 0; j < model.feature_names.length(); j++) {
 
@@ -804,83 +912,45 @@ Result VmafQualityRunner::run(Asset asset, int (*read_frame)(float *ref_data, fl
 
     }
 
-    if (psnr_array_ptr != NULL) {
-        result.set_scores("psnr", psnr);
-    }
-    if (ssim_array_ptr != NULL) {
-        result.set_scores("ssim", ssim);
-    }
-    if (ms_ssim_array_ptr != NULL) {
-        result.set_scores("ms_ssim", ms_ssim);
-    }
+    std::vector<VmafPredictionStruct> predictionStructs;
+
+    _normalize_predict_denormalize_transform_clip(model, num_frms_subsampled, result,
+        vmafContext->enable_transform, vmafContext->disable_clip, predictionStructs);
 
     _set_prediction_result(predictionStructs, result, "vmaf");
 
-    // read additional models, if any
-    if (vmafContext->additional_model_paths != NULL) {
+//    // read additional models, if any
+//    if (vmafContext->additional_model_paths != NULL) {
+//
+//        std::vector<AdditionalModelStruct> additional_model_structs = _get_additional_model_structs(vmafContext->additional_model_paths);
+//
+//        int num_additional_models = additional_model_structs.size();
+//
+//        std::vector<VmafPredictionStruct> additional_prediction_struct;
+//        std::unique_ptr<LibsvmNusvrTrainTestModel> additional_model_ptr;
+//
+//        // predict using additional models, if any (calculate with and without enable_transform)
+//        for (int additional_model_ind = 0; additional_model_ind < num_additional_models; additional_model_ind++) {
+//
+//            additional_model_ptr = _load_model(additional_model_structs.at(additional_model_ind).model_path.c_str());
+//            LibsvmNusvrTrainTestModel& additional_model = *additional_model_ptr;
+//
+//            _normalize_predict_denormalize_transform_clip(additional_model, num_frms_subsampled,
+//                adm2, adm_scale0, adm_scale1, adm_scale2, adm_scale3, motion,
+//                vif_scale0, vif_scale1, vif_scale2, vif_scale3, vif, motion2,
+//                additional_model_structs.at(additional_model_ind).enable_transform,
+//                additional_model_structs.at(additional_model_ind).disable_clip,
+//                additional_prediction_struct);
+//
+//            _set_prediction_result(additional_prediction_struct, result, additional_model_structs.at(additional_model_ind).model_name);
+//
+//            // clean up
+//            additional_prediction_struct.clear();
+//
+//        }
+//
+//    }
 
-        AdditionalModelStruct additional_model_struct = _get_additional_model_struct(vmafContext->additional_model_paths);
-
-        int num_additional_models = additional_model_struct.num_models;
-
-        std::vector<VmafPredictionStruct> additional_prediction_struct, additional_prediction_struct_et;
-        std::unique_ptr<LibsvmNusvrTrainTestModel> additional_model_ptr;
-        StatVector additional_score, additional_score_et;
-        std::string additional_model_struct_et_model_name;
-
-        // predict using additional models, if any (calculate with and without enable_transform)
-        for (int additional_model_ind = 0; additional_model_ind < num_additional_models; additional_model_ind++) {
-
-            additional_model_ptr = _load_model(additional_model_struct.model_paths.at(additional_model_ind).c_str());
-            LibsvmNusvrTrainTestModel& additional_model = *additional_model_ptr;
-
-            _normalize_predict_denormalize_transform_clip(additional_model, num_frms_subsampled,
-                adm2, adm_scale0, adm_scale1, adm_scale2, adm_scale3, motion,
-                vif_scale0, vif_scale1, vif_scale2, vif_scale3, vif, motion2,
-                false, vmafContext->disable_clip, additional_prediction_struct);
-
-            _normalize_predict_denormalize_transform_clip(additional_model, num_frms_subsampled,
-                adm2, adm_scale0, adm_scale1, adm_scale2, adm_scale3, motion,
-                vif_scale0, vif_scale1, vif_scale2, vif_scale3, vif, motion2,
-                true, vmafContext->disable_clip, additional_prediction_struct_et);
-
-            _set_prediction_result(additional_prediction_struct, result, additional_model_struct.model_names.at(additional_model_ind));
-            _set_prediction_result(additional_prediction_struct_et, result, additional_model_struct.model_names.at(additional_model_ind) + "_transformed");
-
-            // clean up vectors
-            additional_prediction_struct.clear();
-            additional_prediction_struct_et.clear();
-
-        }
-
-    }
-
-    free_array(&adm_num_array);
-    free_array(&adm_den_array);
-    free_array(&adm_num_scale0_array);
-    free_array(&adm_den_scale0_array);
-    free_array(&adm_num_scale1_array);
-    free_array(&adm_den_scale1_array);
-    free_array(&adm_num_scale2_array);
-    free_array(&adm_den_scale2_array);
-    free_array(&adm_num_scale3_array);
-    free_array(&adm_den_scale3_array);
-    free_array(&motion_array);
-    free_array(&motion2_array);
-    free_array(&vif_num_scale0_array);
-    free_array(&vif_den_scale0_array);
-    free_array(&vif_num_scale1_array);
-    free_array(&vif_den_scale1_array);
-    free_array(&vif_num_scale2_array);
-    free_array(&vif_den_scale2_array);
-    free_array(&vif_num_scale3_array);
-    free_array(&vif_den_scale3_array);
-    free_array(&vif_array);
-    free_array(&psnr_array);
-    free_array(&ssim_array);
-    free_array(&ms_ssim_array);
-
-    return result;
 }
 
 std::unique_ptr<LibsvmNusvrTrainTestModel> BootstrapVmafQualityRunner::_load_model(const char *model_path)
@@ -1039,7 +1109,9 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
 
     Timer timer;
     timer.start();
-    Result result = runner_ptr->run(asset, read_frame, user_data, vmafContext);
+    Result result;
+    VmafQualityRunner::feature_extract(result, asset, read_frame, user_data, vmafContext);
+    runner_ptr->run(result, asset, read_frame, user_data, vmafContext);
     timer.stop();
 
     if (vmafContext->pool_method != NULL && (strcmp(vmafContext->pool_method, "min")==0))
@@ -1122,11 +1194,12 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
 
     // print out additional models (if any)
     if (vmafContext->additional_model_paths != NULL) {
-        AdditionalModelStruct additional_model_struct = _get_additional_model_struct(vmafContext->additional_model_paths);
-        for (int additional_model_ind = 0; additional_model_ind < additional_model_struct.num_models; additional_model_ind++)
+        std::vector<AdditionalModelStruct> additional_model_structs = _get_additional_model_structs(vmafContext->additional_model_paths);
+        int num_additional_models = additional_model_structs.size();
+        for (int additional_model_ind = 0; additional_model_ind < num_additional_models; additional_model_ind++)
         {
-            printf("%s score = %f\n", additional_model_struct.model_names.at(additional_model_ind).c_str(),
-                result.get_score(additional_model_struct.model_names.at(additional_model_ind).c_str()));
+            printf("%s score = %f\n", additional_model_structs.at(additional_model_ind).model_name.c_str(),
+                result.get_score(additional_model_structs.at(additional_model_ind).model_name.c_str()));
         }
     }
 

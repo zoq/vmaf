@@ -74,9 +74,11 @@ struct VmafPredictionStruct
 
 struct AdditionalModelStruct
 {
-    std::vector<string> model_paths;
-    std::vector<string> model_names;
-    int num_models;
+    bool enable_transform;
+    bool enable_conf_interval;
+    bool disable_clip;
+    string model_name;
+    string model_path;
 };
 
 class LibsvmNusvrTrainTestModel
@@ -124,7 +126,9 @@ class VmafQualityRunner : public IVmafQualityRunner
 {
 public:
     VmafQualityRunner(const char *model_path): model_path(model_path) {}
-    virtual Result run(Asset asset, int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
+    static void feature_extract(Result &result, Asset asset, int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
+               int stride, void *user_data), void *user_data, VmafContext *vmafContext);
+    virtual void run(Result &result, Asset asset, int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
                int stride, void *user_data), void *user_data, VmafContext *vmafContext);
     virtual ~VmafQualityRunner() {}
 protected:
@@ -142,12 +146,7 @@ private:
     virtual void _clip_score(LibsvmNusvrTrainTestModel& model, VmafPredictionStruct& predictionStruct);
     virtual void _postproc_transform_clip(VmafPredictionStruct& predictionStruct);
     void _normalize_predict_denormalize_transform_clip(LibsvmNusvrTrainTestModel& model,
-            size_t num_frms, StatVector& adm2,
-            StatVector& adm_scale0, StatVector& adm_scale1,
-            StatVector& adm_scale2, StatVector& adm_scale3, StatVector& motion,
-            StatVector& vif_scale0, StatVector& vif_scale1,
-            StatVector& vif_scale2, StatVector& vif_scale3, StatVector& vif,
-            StatVector& motion2, bool enable_transform, bool disable_clip,
+            size_t num_frms, Result& result, bool enable_transform, bool disable_clip,
             std::vector<VmafPredictionStruct>& predictionStructs);
 };
 
