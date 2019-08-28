@@ -1,6 +1,6 @@
 # Change Log
 
-## (8/27/2019) [1.3.15]
+## (8/27/2019) [1.4.0]
 
 **New features:**
 - Support for multiple models.
