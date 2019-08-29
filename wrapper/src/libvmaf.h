@@ -45,6 +45,7 @@ typedef struct {
     int do_ssim;
     int do_ms_ssim;
     int enable_conf_interval;
+    int use_color;
     char *format;
     char *model_path;
     char *additional_model_paths;
@@ -62,7 +63,11 @@ struct ModelPredictionContext
     const char *model_path;
 };
 
-int compute_vmaf(double* vmaf_score, int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride_byte, void *user_data),
+#include "picture.h"
+
+int compute_vmaf(double* vmaf_score,
+                 int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride_byte, void *user_data),
+                 int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),
 				 void *user_data, VmafContext *vmafContext);
 
 #ifdef __cplusplus

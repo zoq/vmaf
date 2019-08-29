@@ -410,6 +410,30 @@ class VmafossexecQualityRunnerTest(unittest.TestCase):
         self.assertAlmostEqual(results[0]['VMAFOSSEXEC_score'], 76.954390000000018, places=3)
         self.assertAlmostEqual(results[1]['VMAFOSSEXEC_score'], 99.742800000000003, places=4)
 
+    def test_run_vmafossexec_runner_psnr_color(self):
+        print('test on running VMAFOSSEXEC runner with color ...')
+        ref_path, dis_path, asset, asset_original = set_default_576_324_videos_for_testing()
+
+        self.runner = VmafossExecQualityRunner(
+            [asset, asset_original],
+            None, fifo_mode=True,
+            delete_workdir=True,
+            result_store=None,
+            optional_dict={'use_color': True}
+        )
+        self.runner.run()
+
+        results = self.runner.results
+
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_score'], 76.69926875, places=3)
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_score'], 99.94641666666666, places=4)
+
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_psnr_score'], 30.755066666666664, places=3)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_psnr_u_score'], 38.449447916666664, places=3)
+        self.assertAlmostEqual(results[0]['VMAFOSSEXEC_psnr_v_score'], 40.9919125, places=3)
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_psnr_u_score'], 60.0, places=3)
+        self.assertAlmostEqual(results[1]['VMAFOSSEXEC_psnr_v_score'], 60.0, places=3)
+
     def test_run_vmafossexec_runner_with_phone_score(self):
         print('test on running VMAFOSSEXEC runner with phone score...')
         ref_path, dis_path, asset, asset_original = set_default_576_324_videos_for_testing()

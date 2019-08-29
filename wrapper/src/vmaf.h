@@ -32,6 +32,7 @@
 #include <memory>
 #include <vector>
 
+#include "picture.h"
 #include "svm.h"
 #include "chooseser.h"
 #include "darray.h"
@@ -41,6 +42,7 @@ static const char VMAFOSS_DOC_VERSION[] = "1.4.0";
 static const std::string BOOSTRAP_VMAF_MODEL_KEY = "_bootstrap_";
 
 double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
+               int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),
                void *user_data, VmafContext *vmafContext);
 
 class VmafException: public std::exception
@@ -127,8 +129,10 @@ class VmafQualityRunner : public IVmafQualityRunner
 {
 public:
     VmafQualityRunner(const char *model_path): model_path(model_path) {}
-    static void feature_extract(Result &result, Asset asset, int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
-               int stride, void *user_data), void *user_data, VmafContext *vmafContext);
+    static void feature_extract(Result &result, Asset asset,
+                int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
+                int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),
+                void *user_data, VmafContext *vmafContext);
     virtual void predict(Result &result, ModelPredictionContext *mp_ctx);
     virtual ~VmafQualityRunner() {}
 protected:

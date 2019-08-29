@@ -52,6 +52,7 @@ AVX_OBJS := \
 CFLAGS_COMMON = -g -O3 -fPIC -w -Wextra -pedantic -D MULTI_THREADING
 # CFLAGS_COMMON = -g -O3 -fPIC -w -Wextra -pedantic -D MULTI_THREADING -D PRINT_PROGRESS
 # CFLAGS_COMMON = -g -O3 -fPIC -w -Wextra -pedantic
+#CFLAGS_COMMON = -g -O3 -fPIC -w -Wextra -pedantic -D PRINT_PROGRESS
 # CFLAGS_COMMON = -g -O0 -fPIC -Wall -Wextra -pedantic -D PRINT_PROGRESS
 
 CFLAGS   := -std=c99 $(CFLAGS_COMMON) $(CFLAGS)
@@ -152,7 +153,7 @@ $(OBJDIR)/main.o: $(SRCDIR)/main.cpp
 $(OBJDIR)/vmaf.o: $(SRCDIR)/vmaf.cpp
 	$(CXX) -c -o $@ $(CXXFLAGS) $(CPPFLAGS) \
 	-DOC_NEW_STYLE_INCLUDES -I $(PTOOLSDIR) \
-	-I $(PTOOLSDIR)/opencontainers_1_8_4/include -I $(FEATURESRCDIR) $<
+	-I $(PTOOLSDIR)/opencontainers_1_8_4/include -I $(FEATURESRCDIR) -I $(FEATURESRCDIR)/common $<
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) -I $(FEATURESRCDIR) $<

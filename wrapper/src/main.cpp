@@ -108,7 +108,8 @@ void getMemory(int itr_ctr, int state)
 
 int run_wrapper(char *fmt, int width, int height, char *ref_path, char *dis_path, char *model_path, char *additional_model_paths,
         char *log_path, char *log_fmt, bool disable_clip, bool disable_avx, bool enable_transform, bool phone_model,
-        bool do_psnr, bool do_ssim, bool do_ms_ssim, char *pool_method, int n_thread, int n_subsample, bool enable_conf_interval)
+        bool do_psnr, bool do_ssim, bool do_ms_ssim, char *pool_method, int n_thread, int n_subsample, bool enable_conf_interval,
+        bool use_color)
 {
     double score;
 
@@ -116,6 +117,7 @@ int run_wrapper(char *fmt, int width, int height, char *ref_path, char *dis_path
     struct data *s;
     s = (struct data *)malloc(sizeof(struct data));
     s->format = fmt;
+    s->use_color = use_color;
     s->width = width;
     s->height = height;
     s->ref_rfile = NULL;
@@ -212,9 +214,10 @@ int run_wrapper(char *fmt, int width, int height, char *ref_path, char *dis_path
     vmafContext->n_thread = n_thread;
     vmafContext->n_subsample = n_subsample;
     vmafContext->enable_conf_interval = enable_conf_interval;
+    vmafContext->use_color = use_color;
 
     /* Run VMAF */
-    ret = compute_vmaf(&score, read_frame, s, vmafContext);
+    ret = compute_vmaf(&score, read_frame, read_vmaf_picture, s, vmafContext);
 
     // free VMAF context
     free(vmafContext);
@@ -253,6 +256,7 @@ int main(int argc, char *argv[])
     bool do_psnr = false;
     bool do_ssim = false;
     bool do_ms_ssim = false;
+    bool use_color = false;
     char *pool_method = NULL;
     int n_thread = 0;
     int n_subsample = 1;
@@ -381,6 +385,11 @@ int main(int argc, char *argv[])
         do_ms_ssim = true;
     }
 
+    if (cmdOptionExists(argv + 7, argv + argc, "--color"))
+    {
+        use_color = true;
+    }
+
     pool_method = getCmdOption(argv + 7, argv + argc, "--pool");
     if (pool_method != NULL && !(strcmp(pool_method, "min")==0 || strcmp(pool_method, "harmonic_mean")==0 || strcmp(pool_method, "mean")==0))
     {
@@ -403,13 +412,15 @@ int main(int argc, char *argv[])
 			getMemory(itr_ctr,1);
 			ret = run_wrapper(fmt, width, height, ref_path, dis_path, model_path, additional_model_paths,
                 log_path, log_fmt, disable_clip, disable_avx, enable_transform, phone_model,
-                do_psnr, do_ssim, do_ms_ssim, pool_method, n_thread, n_subsample, enable_conf_interval);
+                do_psnr, do_ssim, do_ms_ssim, pool_method, n_thread, n_subsample, enable_conf_interval,
+                use_color);
 			getMemory(itr_ctr,2);
 		}
 #else
         return run_wrapper(fmt, width, height, ref_path, dis_path, model_path, additional_model_paths,
                 log_path, log_fmt, disable_clip, disable_avx, enable_transform, phone_model,
-                do_psnr, do_ssim, do_ms_ssim, pool_method, n_thread, n_subsample, enable_conf_interval);
+                do_psnr, do_ssim, do_ms_ssim, pool_method, n_thread, n_subsample, enable_conf_interval,
+                use_color);
 #endif
     }
     catch (const std::exception &e)

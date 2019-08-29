@@ -675,6 +675,15 @@ class VmafossExecQualityRunner(QualityRunner):
         else:
             ci = False
 
+        if self.optional_dict is not None and 'use_color' in self.optional_dict:
+            use_color = self.optional_dict['use_color']
+        else:
+            use_color = False
+
+        # augment the feature set with color features, if color is enabled
+        if use_color:
+            self.FEATURES += ["psnr_u", "psnr_v"]
+
         additional_models_dict = self.optional_dict['additional_models'] \
             if self.optional_dict is not None and 'additional_models' in self.optional_dict else None
 
@@ -707,7 +716,8 @@ class VmafossExecQualityRunner(QualityRunner):
         ExternalProgramCaller.call_vmafossexec(fmt, w, h, ref_path, dis_path, model, log_file_path,
                                                disable_clip_score, enable_transform_score,
                                                phone_model, disable_avx, n_thread, n_subsample,
-                                               psnr, ssim, ms_ssim, ci, exe, logger, additional_models)
+                                               psnr, ssim, ms_ssim, ci, exe, logger, additional_models,
+                                               use_color)
 
     @staticmethod
     def get_json_additional_model_string(d):

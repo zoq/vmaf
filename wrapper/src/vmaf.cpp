@@ -640,8 +640,10 @@ std::vector<AdditionalModelStruct> _get_additional_model_structs(char *model_pat
     return additional_model_structs;
 }
 
-void VmafQualityRunner::feature_extract(Result &result, Asset asset, int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
-                       int stride, void *user_data), void *user_data, VmafContext *vmafContext)
+void VmafQualityRunner::feature_extract(Result &result, Asset asset,
+                        int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
+                        int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),
+                        void *user_data, VmafContext *vmafContext)
 {
     dbg_printf("Initialize storage arrays...\n");
     int w = asset.getWidth();
@@ -654,10 +656,12 @@ void VmafQualityRunner::feature_extract(Result &result, Asset asset, int (*read_
             adm_den_scale3_array, motion_array, motion2_array,
             vif_num_scale0_array, vif_den_scale0_array, vif_num_scale1_array,
             vif_den_scale1_array, vif_num_scale2_array, vif_den_scale2_array,
-            vif_num_scale3_array, vif_den_scale3_array, vif_array, psnr_array,
+            vif_num_scale3_array, vif_den_scale3_array, vif_array,
+            psnr_array, psnr_u_array, psnr_v_array,
             ssim_array, ms_ssim_array;
     /* use the following ptrs as flags to turn on/off optional metrics */
-    DArray *psnr_array_ptr, *ssim_array_ptr, *ms_ssim_array_ptr;
+    DArray *psnr_array_ptr, *psnr_u_array_ptr, *psnr_v_array_ptr;
+    DArray *ssim_array_ptr, *ms_ssim_array_ptr;
     init_array(&adm_num_array, INIT_FRAMES);
     init_array(&adm_den_array, INIT_FRAMES);
     init_array(&adm_num_scale0_array, INIT_FRAMES);
@@ -680,8 +684,11 @@ void VmafQualityRunner::feature_extract(Result &result, Asset asset, int (*read_
     init_array(&vif_den_scale3_array, INIT_FRAMES);
     init_array(&vif_array, INIT_FRAMES);
     init_array(&psnr_array, INIT_FRAMES);
+    init_array(&psnr_u_array, INIT_FRAMES);
+    init_array(&psnr_v_array, INIT_FRAMES);
     init_array(&ssim_array, INIT_FRAMES);
     init_array(&ms_ssim_array, INIT_FRAMES);
+
     /* optional output arrays */
     if (vmafContext->do_psnr) {
         psnr_array_ptr = &psnr_array;
@@ -698,16 +705,26 @@ void VmafQualityRunner::feature_extract(Result &result, Asset asset, int (*read_
     } else {
         ms_ssim_array_ptr = NULL;
     }
+    if (vmafContext->use_color) {
+        psnr_u_array_ptr = &psnr_u_array;
+        psnr_v_array_ptr = &psnr_v_array;
+    } else {
+        psnr_u_array_ptr = NULL;
+        psnr_v_array_ptr = NULL;
+    }
+
     dbg_printf("Extract atom features...\n");
-    int ret = combo(read_frame, user_data, w, h, fmt, &adm_num_array,
+    int ret = combo(read_frame, read_vmaf_picture, user_data, w, h, fmt, &adm_num_array,
             &adm_den_array, &adm_num_scale0_array, &adm_den_scale0_array,
             &adm_num_scale1_array, &adm_den_scale1_array, &adm_num_scale2_array,
             &adm_den_scale2_array, &adm_num_scale3_array, &adm_den_scale3_array,
             &motion_array, &motion2_array, &vif_num_scale0_array,
             &vif_den_scale0_array, &vif_num_scale1_array, &vif_den_scale1_array,
             &vif_num_scale2_array, &vif_den_scale2_array, &vif_num_scale3_array,
-            &vif_den_scale3_array, &vif_array, psnr_array_ptr, ssim_array_ptr,
-            ms_ssim_array_ptr, errmsg, vmafContext->n_thread, vmafContext->n_subsample);
+            &vif_den_scale3_array, &vif_array,
+            psnr_array_ptr, psnr_u_array_ptr, psnr_v_array_ptr, ssim_array_ptr,
+            ms_ssim_array_ptr, errmsg, vmafContext->n_thread, vmafContext->n_subsample,
+            vmafContext->use_color);
     if (ret) {
         throw VmafException(errmsg);
     }
@@ -767,7 +784,7 @@ void VmafQualityRunner::feature_extract(Result &result, Asset asset, int (*read_
     StatVector adm2, motion, vif_scale0, vif_scale1, vif_scale2, vif_scale3,
             vif, motion2;
     StatVector adm_scale0, adm_scale1, adm_scale2, adm_scale3;
-    StatVector psnr, ssim, ms_ssim;
+    StatVector psnr, psnr_u, psnr_v, ssim, ms_ssim;
 
     int num_frms_subsampled = 0;
     for (size_t i = 0; i < num_frms; i += vmafContext->n_subsample) {
@@ -805,6 +822,12 @@ void VmafQualityRunner::feature_extract(Result &result, Asset asset, int (*read_
         if (psnr_array_ptr != NULL) {
             psnr.append(get_at(&psnr_array, i));
         }
+        if (psnr_u_array_ptr != NULL) {
+            psnr_u.append(get_at(&psnr_u_array, i));
+        }
+        if (psnr_v_array_ptr != NULL) {
+            psnr_v.append(get_at(&psnr_v_array, i));
+        }
         if (ssim_array_ptr != NULL) {
             ssim.append(get_at(&ssim_array, i));
         }
@@ -833,6 +856,12 @@ void VmafQualityRunner::feature_extract(Result &result, Asset asset, int (*read_
 
     if (psnr_array_ptr != NULL) {
         result.set_scores("psnr", psnr);
+    }
+    if (psnr_u_array_ptr != NULL) {
+        result.set_scores("psnr_u", psnr_u);
+    }
+    if (psnr_v_array_ptr != NULL) {
+        result.set_scores("psnr_v", psnr_v);
     }
     if (ssim_array_ptr != NULL) {
         result.set_scores("ssim", ssim);
@@ -863,6 +892,8 @@ void VmafQualityRunner::feature_extract(Result &result, Asset asset, int (*read_
     free_array(&vif_den_scale3_array);
     free_array(&vif_array);
     free_array(&psnr_array);
+    free_array(&psnr_u_array);
+    free_array(&psnr_v_array);
     free_array(&ssim_array);
     free_array(&ms_ssim_array);
 
@@ -1048,6 +1079,7 @@ void BootstrapVmafQualityRunner::_set_prediction_result(
 }
 
 double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
+               int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),
                void *user_data, VmafContext *vmafContext)
 {
     printf("Start calculating VMAF score...\n");
@@ -1087,7 +1119,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
     Result result;
 
     // feature extraction
-    VmafQualityRunner::feature_extract(result, asset, read_frame, user_data, vmafContext);
+    VmafQualityRunner::feature_extract(result, asset, read_frame, read_vmaf_picture, user_data, vmafContext);
 
     // predict using baseline VMAF model
     runner_ptr->predict(result, mp_ctx);
