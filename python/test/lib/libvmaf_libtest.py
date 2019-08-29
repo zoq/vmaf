@@ -95,7 +95,7 @@ class QualityRunnerTest(unittest.TestCase):
         self.assertAlmostEqual(results[1]['TESTLIB_score'], 99.946416604585025, places=4)
 
     def test_run_testlib_runner_with_thread(self):
-        print 'test on running TESTLIB runner with thread...'
+        print('test on running TESTLIB runner with thread...')
         ref_path, dis_path, asset, asset_original = set_default_576_324_videos_for_testing()
 
         self.runner = LibRunner(
@@ -113,7 +113,7 @@ class QualityRunnerTest(unittest.TestCase):
         self.assertAlmostEqual(results[1]['TESTLIB_score'], 99.946416604585025, places=4)
 
     def test_run_testlib_runner_phone_model(self):
-        print 'test on running TESTLIB runner with phone model...'
+        print('test on running TESTLIB runner with phone model...')
         ref_path, dis_path, asset, asset_original = set_default_576_324_videos_for_testing()
 
         self.runner = LibRunner(
