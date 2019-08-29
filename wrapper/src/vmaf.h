@@ -37,6 +37,7 @@
 #include "darray.h"
 #include "libvmaf.h"
 
+static const char VMAFOSS_DOC_VERSION[] = "1.4.0";
 static const std::string BOOSTRAP_VMAF_MODEL_KEY = "_bootstrap_";
 
 double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),

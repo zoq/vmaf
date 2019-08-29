@@ -1047,8 +1047,6 @@ void BootstrapVmafQualityRunner::_set_prediction_result(
 
 }
 
-static const char VMAFOSS_DOC_VERSION[] = "1.4.0";
-
 double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
                void *user_data, VmafContext *vmafContext)
 {
