@@ -126,7 +126,7 @@ int read_frame(float *ref_data, float *dis_data, float *temp_data, int stride_by
         goto fail_or_end;
     }
     
-    dbg_fprintf(stderr, "Frame: %d/%d\r", completed_frames++, user_data->num_frames);
+    fprintf(stderr, "Frame: %d/%d\r", completed_frames++, user_data->num_frames);
 
 fail_or_end:
     return ret;
