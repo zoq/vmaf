@@ -716,7 +716,7 @@ class VmafossExecQualityRunner(QualityRunner):
         """
         if d:
             s_list = []
-            for key in d.keys():
+            for key in sorted(d.keys()):
                 inner_d = d[key]
                 single_model = "{{{0}}}".format('\\,'.join(map(lambda k: '\\"{k}\\"\\:\\"{v}\\"'
                                                            .format(k=k, v=inner_d[k]), sorted(inner_d.keys()))))
