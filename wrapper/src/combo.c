@@ -917,7 +917,6 @@ int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
     init_blur_array(&combo_thread_data.blur_buf_array, MIN(3 * (combo_thread_data.thread_count), MAX_NUM_THREADS), combo_thread_data.data_sz, MAX_ALIGN);
 
     if (use_color) {
-//        fprintf(stderr, "data_sz: %d, data_sz_u:%d, data_sz_v:%d. \n", combo_thread_data.data_sz, combo_thread_data.data_sz_u, combo_thread_data.data_sz_v);
         init_blur_array(&combo_thread_data.ref_buf_u_array, MIN(combo_thread_data.thread_count + 1, MAX_NUM_THREADS), combo_thread_data.data_sz_u, MAX_ALIGN);
         init_blur_array(&combo_thread_data.dis_buf_u_array, MIN(combo_thread_data.thread_count + 1, MAX_NUM_THREADS), combo_thread_data.data_sz_u, MAX_ALIGN);
         init_blur_array(&combo_thread_data.ref_buf_v_array, MIN(combo_thread_data.thread_count + 1, MAX_NUM_THREADS), combo_thread_data.data_sz_v, MAX_ALIGN);
@@ -1067,8 +1066,6 @@ int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
     }
 
     combo_thread_data.data_sz = (size_t)combo_thread_data.stride * h;
-
-//    fprintf(stderr, "Before threadfunc.\n");
 
     combo_threadfunc(&combo_thread_data);
 
