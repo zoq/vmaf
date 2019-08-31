@@ -79,7 +79,7 @@ std::string to_zero_lead(const int value, const unsigned precision)
      return oss.str();
 }
 
-std::string pooling_enum_to_string(VmafPoolingMethod e) {
+std::string pooling_enum_to_string(enum VmafPoolingMethod e) {
     switch (e) {
         case VmafPoolingMethod::VMAF_POOL_MIN: return "min";
         case VmafPoolingMethod::VMAF_POOL_MEAN: return "mean";
@@ -943,14 +943,14 @@ void VmafQualityRunner::feature_extract(Result &result, Asset asset,
 
 }
 
-void VmafQualityRunner::predict(Result &result, ModelPredictionContext *mp_ctx)
+void VmafQualityRunner::predict(Result &result, VmafModel *vmaf_model_ptr)
 {
     dbg_printf("Normalize features, SVM regression, denormalize score, clip...\n");
 
     int num_frms_subsampled = result.get_num_frms();
 
     // load model
-    std::unique_ptr<LibsvmNusvrTrainTestModel> model_ptr = _load_model(mp_ctx->model_path);
+    std::unique_ptr<LibsvmNusvrTrainTestModel> model_ptr = _load_model(vmaf_model_ptr->path);
     LibsvmNusvrTrainTestModel& model = *model_ptr;
 
     // verify that all feature names in the loaded model are valid
@@ -989,9 +989,9 @@ void VmafQualityRunner::predict(Result &result, ModelPredictionContext *mp_ctx)
     std::vector<VmafPredictionStruct> predictionStructs;
 
     _normalize_predict_denormalize_transform_clip(model, num_frms_subsampled, result,
-        mp_ctx->enable_transform, mp_ctx->disable_clip, predictionStructs);
+        vmaf_model_ptr->enable_transform, vmaf_model_ptr->disable_clip, predictionStructs);
 
-    _set_prediction_result(predictionStructs, result, mp_ctx->model_name);
+    _set_prediction_result(predictionStructs, result, vmaf_model_ptr->name);
 
 }
 
@@ -1145,57 +1145,17 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
     // feature extraction
     VmafQualityRunner::feature_extract(result, asset, read_frame, read_vmaf_picture, user_data, vmafSettings);
 
-    ModelPredictionContext *mp_ctx;
-    mp_ctx = (ModelPredictionContext *)malloc(sizeof(ModelPredictionContext));
-
     unsigned int num_models = vmafSettings->num_models;
     for (int i = 0; i < num_models; i ++)
     {
-        mp_ctx->model_name = vmafSettings->vmaf_model[i].name;
-        mp_ctx->model_path = vmafSettings->vmaf_model[i].path;
-        mp_ctx->enable_conf_interval = vmafSettings->vmaf_model[i].enable_conf_interval;
-        mp_ctx->enable_transform = vmafSettings->vmaf_model[i].enable_transform;
-        mp_ctx->disable_clip = vmafSettings->vmaf_model[i].disable_clip;
-        std::unique_ptr<IVmafQualityRunner> runner_ptr = VmafQualityRunnerFactory::createVmafQualityRunner(mp_ctx);
+        fprintf(stderr, "model_name is: %s\n", vmafSettings->vmaf_model[i].name);
+//        fprintf(stderr, "model_path is: %s\n", vmafSettings->vmaf_model[i].path);
+        std::unique_ptr<IVmafQualityRunner> runner_ptr =
+            VmafQualityRunnerFactory::createVmafQualityRunner(&(vmafSettings->vmaf_model[i]));
         // predict using i-th model
-        runner_ptr->predict(result, mp_ctx);
+        runner_ptr->predict(result, &(vmafSettings->vmaf_model[i]));
     }
 
-    free(mp_ctx);
-
-    // predict using additional models, if any
-    std::vector<AdditionalModelStruct> additional_model_structs;
-    if (vmafSettings->additional_model_paths != NULL) {
-
-        ModelPredictionContext *additional_mp_ctx;
-        additional_mp_ctx = (ModelPredictionContext *)malloc(sizeof(ModelPredictionContext));
-
-        additional_model_structs = _get_additional_model_structs(vmafSettings->additional_model_paths);
-
-        int num_additional_models = additional_model_structs.size();
-
-        std::vector<VmafPredictionStruct> additional_prediction_struct;
-        std::unique_ptr<LibsvmNusvrTrainTestModel> additional_model_ptr;
-
-        // predict using additional models, if any
-        for (int additional_model_ind = 0; additional_model_ind < num_additional_models; additional_model_ind++) {
-
-            additional_mp_ctx->model_name = additional_model_structs.at(additional_model_ind).model_name.c_str();
-            additional_mp_ctx->model_path = additional_model_structs.at(additional_model_ind).model_path.c_str();
-            additional_mp_ctx->enable_conf_interval = additional_model_structs.at(additional_model_ind).enable_conf_interval;
-            additional_mp_ctx->enable_transform = additional_model_structs.at(additional_model_ind).enable_transform;
-            additional_mp_ctx->disable_clip = additional_model_structs.at(additional_model_ind).disable_clip;
-
-            std::unique_ptr<IVmafQualityRunner> additional_runner_ptr = VmafQualityRunnerFactory::createVmafQualityRunner(additional_mp_ctx);
-
-            // predict using additional model
-            additional_runner_ptr->predict(result, additional_mp_ctx);
-
-        }
-
-        free(additional_mp_ctx);
-
-    }
 
     timer.stop();
 
@@ -1212,25 +1172,28 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         result.setScoreAggregateMethod(ScoreAggregateMethod::MEAN);
     }
 
-    size_t num_frames_subsampled = result.get_scores("vmaf").size();
-    double aggregate_vmaf = result.get_score("vmaf");
+    unsigned int default_model_ind = vmafSettings->default_model_ind;
+    std::vector<std::string> result_keys = result.get_keys();
+    std::string default_model_name = vmafSettings->vmaf_model[default_model_ind].name;
+
+    size_t num_frames_subsampled = result.get_scores(default_model_name).size();
+    double aggregate_vmaf = result.get_score(default_model_name);
+
     double exec_fps = (double)num_frames_subsampled * vmafSettings->n_subsample / (double)timer.elapsed();
 #if TIME_TEST_ENABLE
 	double time_taken = (double)timer.elapsed();
 #endif
     printf("Exec FPS: %f\n", exec_fps);
 
-    std::vector<std::string> result_keys = result.get_keys();
-
     double aggregate_bagging = 0.0, aggregate_stddev = 0.0, aggregate_ci95_low = 0.0, aggregate_ci95_high = 0.0;
-    if (result.has_scores("vmaf_bagging"))
-        aggregate_bagging = result.get_score("vmaf_bagging");
-    if (result.has_scores("vmaf_stddev"))
-        aggregate_stddev = result.get_score("vmaf_stddev");
-    if (result.has_scores("vmaf_ci95_low"))
-        aggregate_ci95_low = result.get_score("vmaf_ci95_low");
-    if (result.has_scores("vmaf_ci95_high"))
-        aggregate_ci95_high = result.get_score("vmaf_ci95_high");
+    if (result.has_scores(default_model_name + "_bagging"))
+        aggregate_bagging = result.get_score(default_model_name + "_bagging");
+    if (result.has_scores(default_model_name + "_stddev"))
+        aggregate_stddev = result.get_score(default_model_name + "_stddev");
+    if (result.has_scores(default_model_name + "_ci95_low"))
+        aggregate_ci95_low = result.get_score(default_model_name + "_ci95_low");
+    if (result.has_scores(default_model_name + "_ci95_high"))
+        aggregate_ci95_high = result.get_score(default_model_name + "_ci95_high");
 
     double aggregate_psnr = 0.0, aggregate_ssim = 0.0, aggregate_ms_ssim = 0.0;
     if (result.has_scores("psnr"))
@@ -1251,6 +1214,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         printf("VMAF CI95_low score (%s) = %f\n", pool_method_str.c_str(), aggregate_ci95_low);
     if (aggregate_ci95_high)
         printf("VMAF CI95_high score (%s) = %f\n", pool_method_str.c_str(), aggregate_ci95_high);
+
     if (aggregate_psnr)
         printf("PSNR score (%s) = %f\n", pool_method_str.c_str(), aggregate_psnr);
     if (aggregate_ssim)
@@ -1258,14 +1222,12 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
     if (aggregate_ms_ssim)
         printf("MS-SSIM score (%s) = %f\n", pool_method_str.c_str(), aggregate_ms_ssim);
 
-    // print out additional models (if any)
-    if (vmafSettings->additional_model_paths != NULL) {
-        int num_additional_models = additional_model_structs.size();
-        for (int additional_model_ind = 0; additional_model_ind < num_additional_models; additional_model_ind++)
-        {
-            printf("%s score (%s) = %f\n", additional_model_structs.at(additional_model_ind).model_name.c_str(),
-                pool_method_str.c_str(),
-                result.get_score(additional_model_structs.at(additional_model_ind).model_name.c_str()));
+    // print out results for all additional (non-default) models
+    for (unsigned int model_ind = 0; model_ind < num_models; model_ind++)
+    {
+        if (model_ind != default_model_ind) {
+            printf("%s score (%s) = %f\n", vmafSettings->vmaf_model[model_ind].name,
+                pool_method_str.c_str(), result.get_score(vmafSettings->vmaf_model[model_ind].name));
         }
     }
 
@@ -1300,7 +1262,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         double value;
 
         OTab params;
-//        params["model"] = _get_file_name(std::string(vmafSettings->model_path));
+        params["model"] = _get_file_name(std::string(vmafSettings->vmaf_model[default_model_ind].path));
         params["scaledWidth"] = vmafSettings->width;
         params["scaledHeight"] = vmafSettings->height;
         params["subsample"] = vmafSettings->n_subsample;
@@ -1379,7 +1341,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         xml_root.append_attribute("version") = VMAFOSS_DOC_VERSION;
 
         auto params_node = xml_root.append_child("params");
-//        params_node.append_attribute("model") = _get_file_name(std::string(vmafSettings->model_path)).c_str();
+        params_node.append_attribute("model") = _get_file_name(std::string(vmafSettings->vmaf_model[default_model_ind].path)).c_str();
         params_node.append_attribute("scaledWidth") = vmafSettings->width;
         params_node.append_attribute("scaledHeight") = vmafSettings->height;
         params_node.append_attribute("subsample") = vmafSettings->n_subsample;
@@ -1404,7 +1366,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         if (aggregate_ms_ssim)
             info_node.append_attribute("aggregateMS_SSIM") = aggregate_ms_ssim;
         if (vmafSettings->pool_method)
-            info_node.append_attribute("poolMethod") = vmafSettings->pool_method;
+            info_node.append_attribute("poolMethod") = pool_method_str.c_str();
         info_node.append_attribute("execFps") = exec_fps;
 #if TIME_TEST_ENABLE
 		info_node.append_attribute("timeTaken") = time_taken;

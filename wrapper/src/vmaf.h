@@ -127,15 +127,6 @@ private:
     unsigned int num_frms;
 };
 
-struct ModelPredictionContext
-{
-    const char *model_name;
-    const char *model_path;
-    bool enable_conf_interval;
-    bool enable_transform;
-    bool disable_clip;
-};
-
 struct VmafPredictionStruct
 {
     std::map<VmafPredictionReturnType, double> vmafPrediction;
@@ -153,14 +144,14 @@ struct AdditionalModelStruct
 
 class IVmafQualityRunner {
 public:
-    virtual void predict(Result &result, ModelPredictionContext *mp_ctx) = 0;
+    virtual void predict(Result &result, VmafModel *vmaf_model_ptr) = 0;
     virtual ~IVmafQualityRunner() {}
 };
 
 class VmafQualityRunnerFactory {
 public:
     static std::unique_ptr<IVmafQualityRunner>
-        createVmafQualityRunner(ModelPredictionContext *mp_ctx);
+        createVmafQualityRunner(VmafModel *vmaf_model_ptr);
 };
 
 class LibsvmNusvrTrainTestModel
@@ -212,7 +203,7 @@ public:
                 int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
                 int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),
                 void *user_data, VmafSettings *vmafSettings);
-    virtual void predict(Result &result, ModelPredictionContext *mp_ctx);
+    virtual void predict(Result &result, VmafModel *vmaf_model_ptr);
     virtual ~VmafQualityRunner() {}
 protected:
     static void _transform_value(LibsvmNusvrTrainTestModel& model, double& prediction);

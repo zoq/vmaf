@@ -84,10 +84,6 @@ typedef struct {
 
 typedef struct {
 
-    int enable_transform;
-    int disable_clip;
-    int enable_conf_interval;
-
     int disable_avx;
     int n_thread;
     int n_subsample;
@@ -96,14 +92,13 @@ typedef struct {
     int height;
 
     unsigned int num_models;
-    char *model_path;
-    char *additional_model_paths;
 
     VmafModel vmaf_model[MAX_NUM_VMAF_MODELS];
 
     char *log_path;
 
     int vmaf_feature_setting;
+    unsigned int default_model_ind;
 
     enum VmafPixelFormat pix_fmt;
     enum VmafLogFmt log_fmt;
