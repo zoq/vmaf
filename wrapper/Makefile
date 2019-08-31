@@ -149,7 +149,9 @@ $(OBJDIR)/libvmaf.o: $(SRCDIR)/libvmaf.cpp
 	-I $(PTOOLSDIR)/opencontainers_1_8_4/include $<
 
 $(OBJDIR)/main.o: $(SRCDIR)/main.cpp
-	$(CXX) -c -o $@ $(CXXFLAGS) $(CPPFLAGS) -I $(FEATURESRCDIR) -I $(FEATURESRCDIR)/common $<
+	$(CXX) -c -o $@ $(CXXFLAGS) $(CPPFLAGS) \
+	-DOC_NEW_STYLE_INCLUDES -I $(PTOOLSDIR) \
+	-I $(PTOOLSDIR)/opencontainers_1_8_4/include -I $(FEATURESRCDIR) -I $(FEATURESRCDIR)/common $<
 
 $(OBJDIR)/vmaf.o: $(SRCDIR)/vmaf.cpp
 	$(CXX) -c -o $@ $(CXXFLAGS) $(CPPFLAGS) \

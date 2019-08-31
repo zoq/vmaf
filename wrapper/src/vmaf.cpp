@@ -88,15 +88,6 @@ std::string pooling_enum_to_string(VmafPoolingMethod e) {
     }
 }
 
-void _replace_string_in_place(std::string& subject, const std::string& search,
-                          const std::string& replace) {
-    size_t pos = 0;
-    while ((pos = subject.find(search, pos)) != std::string::npos) {
-         subject.replace(pos, search.length(), replace);
-         pos += replace.length();
-    }
-}
-
 void SvmDelete::operator()(void *svm)
 {
     svm_free_and_destroy_model((svm_model **)&svm);
@@ -608,6 +599,16 @@ void VmafQualityRunner::_set_prediction_result(
     }
     result.set_scores(model_name, score);
 }
+
+void _replace_string_in_place(std::string& subject, const std::string& search,
+                          const std::string& replace) {
+    size_t pos = 0;
+    while ((pos = subject.find(search, pos)) != std::string::npos) {
+         subject.replace(pos, search.length(), replace);
+         pos += replace.length();
+    }
+}
+
 
 std::vector<AdditionalModelStruct> _get_additional_model_structs(char *model_paths)
 {
@@ -1137,17 +1138,6 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
 
     Asset asset(vmafSettings->width, vmafSettings->height, vmafSettings->pix_fmt);
 
-    ModelPredictionContext *mp_ctx;
-    mp_ctx = (ModelPredictionContext *)malloc(sizeof(ModelPredictionContext));
-
-    mp_ctx->model_name = "vmaf";
-    mp_ctx->model_path = vmafSettings->model_path;
-    mp_ctx->enable_conf_interval = vmafSettings->enable_conf_interval;
-    mp_ctx->enable_transform = vmafSettings->enable_transform;
-    mp_ctx->disable_clip = vmafSettings->disable_clip;
-
-    std::unique_ptr<IVmafQualityRunner> runner_ptr = VmafQualityRunnerFactory::createVmafQualityRunner(mp_ctx);
-
     Timer timer;
     timer.start();
     Result result;
@@ -1155,8 +1145,21 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
     // feature extraction
     VmafQualityRunner::feature_extract(result, asset, read_frame, read_vmaf_picture, user_data, vmafSettings);
 
-    // predict using baseline VMAF model
-    runner_ptr->predict(result, mp_ctx);
+    ModelPredictionContext *mp_ctx;
+    mp_ctx = (ModelPredictionContext *)malloc(sizeof(ModelPredictionContext));
+
+    unsigned int num_models = vmafSettings->num_models;
+    for (int i = 0; i < num_models; i ++)
+    {
+        mp_ctx->model_name = vmafSettings->vmaf_model[i].name;
+        mp_ctx->model_path = vmafSettings->vmaf_model[i].path;
+        mp_ctx->enable_conf_interval = vmafSettings->vmaf_model[i].enable_conf_interval;
+        mp_ctx->enable_transform = vmafSettings->vmaf_model[i].enable_transform;
+        mp_ctx->disable_clip = vmafSettings->vmaf_model[i].disable_clip;
+        std::unique_ptr<IVmafQualityRunner> runner_ptr = VmafQualityRunnerFactory::createVmafQualityRunner(mp_ctx);
+        // predict using i-th model
+        runner_ptr->predict(result, mp_ctx);
+    }
 
     free(mp_ctx);
 
@@ -1297,7 +1300,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         double value;
 
         OTab params;
-        params["model"] = _get_file_name(std::string(vmafSettings->model_path));
+//        params["model"] = _get_file_name(std::string(vmafSettings->model_path));
         params["scaledWidth"] = vmafSettings->width;
         params["scaledHeight"] = vmafSettings->height;
         params["subsample"] = vmafSettings->n_subsample;
@@ -1376,7 +1379,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         xml_root.append_attribute("version") = VMAFOSS_DOC_VERSION;
 
         auto params_node = xml_root.append_child("params");
-        params_node.append_attribute("model") = _get_file_name(std::string(vmafSettings->model_path)).c_str();
+//        params_node.append_attribute("model") = _get_file_name(std::string(vmafSettings->model_path)).c_str();
         params_node.append_attribute("scaledWidth") = vmafSettings->width;
         params_node.append_attribute("scaledHeight") = vmafSettings->height;
         params_node.append_attribute("subsample") = vmafSettings->n_subsample;

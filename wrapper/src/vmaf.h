@@ -129,11 +129,11 @@ private:
 
 struct ModelPredictionContext
 {
-    int enable_conf_interval;
-    int enable_transform;
-    int disable_clip;
     const char *model_name;
     const char *model_path;
+    bool enable_conf_interval;
+    bool enable_transform;
+    bool disable_clip;
 };
 
 struct VmafPredictionStruct

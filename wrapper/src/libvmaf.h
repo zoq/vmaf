@@ -32,6 +32,10 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
+
+static const unsigned int MAX_NUM_VMAF_MODELS = 5;
+
 enum VmafLogFmt {
     VMAF_LOG_FMT_XML  = (1 << 0),
     VMAF_LOG_FMT_JSON = (1 << 1),
@@ -71,22 +75,34 @@ typedef struct VmafPicture
 } VmafPicture;
 
 typedef struct {
+    const char *name;
+    const char *path;
+    bool enable_transform;
+    bool disable_clip;
+    bool enable_conf_interval;
+} VmafModel;
+
+typedef struct {
 
     int enable_transform;
     int disable_clip;
-    int disable_avx;
     int enable_conf_interval;
 
+    int disable_avx;
     int n_thread;
     int n_subsample;
 
     int width;
     int height;
 
+    unsigned int num_models;
     char *model_path;
     char *additional_model_paths;
 
+    VmafModel vmaf_model[MAX_NUM_VMAF_MODELS];
+
     char *log_path;
+
     int vmaf_feature_setting;
 
     enum VmafPixelFormat pix_fmt;
