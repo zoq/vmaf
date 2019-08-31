@@ -23,14 +23,14 @@
 /*
  * For a given format, returns the constants to use in psnr based calculations
  */
-int psnr_constants(const char *fmt, double *peak, double *psnr_max) {
-    if (!strcmp(fmt, "yuv420p") || !strcmp(fmt, "yuv422p") || !strcmp(fmt, "yuv444p"))
+int psnr_constants(enum VmafPixelFormat fmt, double *peak, double *psnr_max) {
+    if (fmt == VMAF_PIX_FMT_YUV420P || fmt == VMAF_PIX_FMT_YUV422P || fmt == VMAF_PIX_FMT_YUV444P)
     {
         // max psnr 60.0 for 8-bit per Ioannis
         *peak = 255.0;
         *psnr_max = 60.0;
     }
-    else if (!strcmp(fmt, "yuv420p10le") || !strcmp(fmt, "yuv422p10le") || !strcmp(fmt, "yuv444p10le"))
+    else if (fmt == VMAF_PIX_FMT_YUV420P10LE || fmt == VMAF_PIX_FMT_YUV422P10LE || fmt == VMAF_PIX_FMT_YUV444P10LE)
     {
         // 10 bit gets normalized to 8 bit, peak is 1023 / 4.0 = 255.75
         // max psnr 72.0 for 10-bit per Ioannis

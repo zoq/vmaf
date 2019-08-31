@@ -25,6 +25,7 @@
 #include <cstring>
 #include <cstdint>
 #include <sys/stat.h>
+
 #include "libvmaf.h"
 
 extern "C" {
@@ -106,24 +107,23 @@ void getMemory(int itr_ctr, int state)
 }
 #endif
 
-int run_wrapper(char *fmt, int width, int height, char *ref_path, char *dis_path, char *model_path, char *additional_model_paths,
-        char *log_path, char *log_fmt, bool disable_clip, bool disable_avx, bool enable_transform, bool phone_model,
-        bool do_psnr, bool do_ssim, bool do_ms_ssim, char *pool_method, int n_thread, int n_subsample, bool enable_conf_interval,
-        bool use_color)
+int run_wrapper(enum VmafPixelFormat pix_fmt, int width, int height, char *ref_path, char *dis_path, char *model_path, char *additional_model_paths,
+        char *log_path, enum VmafLogFmt log_fmt, bool disable_clip, bool disable_avx, bool enable_transform,
+        int vmaf_feature_setting, enum VmafPoolingMethod pool_method, int n_thread, int n_subsample, bool enable_conf_interval)
 {
     double score;
 
     int ret = 0;
     struct data *s;
     s = (struct data *)malloc(sizeof(struct data));
-    s->format = fmt;
-    s->use_color = use_color;
+    s->format = pix_fmt;
+    s->use_color = vmaf_feature_setting & VMAF_FEATURE_SETTING_DO_COLOR;
     s->width = width;
     s->height = height;
     s->ref_rfile = NULL;
     s->dis_rfile = NULL;
 
-    if (!strcmp(fmt, "yuv420p") || !strcmp(fmt, "yuv420p10le"))
+    if (pix_fmt == VMAF_PIX_FMT_YUV420P || pix_fmt == VMAF_PIX_FMT_YUV420P10LE)
     {
         if ((width * height) % 2 != 0)
         {
@@ -133,17 +133,17 @@ int run_wrapper(char *fmt, int width, int height, char *ref_path, char *dis_path
         }
         s->offset = width * height / 2;
     }
-    else if (!strcmp(fmt, "yuv422p") || !strcmp(fmt, "yuv422p10le"))
+    else if (pix_fmt == VMAF_PIX_FMT_YUV422P || pix_fmt == VMAF_PIX_FMT_YUV422P10LE)
     {
         s->offset = width * height;
     }
-    else if (!strcmp(fmt, "yuv444p") || !strcmp(fmt, "yuv444p10le"))
+    else if (pix_fmt == VMAF_PIX_FMT_YUV444P || pix_fmt == VMAF_PIX_FMT_YUV444P10LE)
     {
         s->offset = width * height * 2;
     }
     else
     {
-        fprintf(stderr, "unknown format %s.\n", fmt);
+        fprintf(stderr, "Unknown format.\n");
         ret = 1;
         goto fail_or_end;
     }
@@ -174,7 +174,7 @@ int run_wrapper(char *fmt, int width, int height, char *ref_path, char *dis_path
 #endif
         {
             size_t frame_size = width * height + s->offset;
-            if (!strcmp(fmt, "yuv420p10le") || !strcmp(fmt, "yuv422p10le") || !strcmp(fmt, "yuv444p10le"))
+            if (pix_fmt == VMAF_PIX_FMT_YUV420P10LE || pix_fmt == VMAF_PIX_FMT_YUV422P10LE || pix_fmt == VMAF_PIX_FMT_YUV444P10LE)
             {
                 frame_size *= 2;
             }
@@ -196,25 +196,26 @@ int run_wrapper(char *fmt, int width, int height, char *ref_path, char *dis_path
     vmafContext = (VmafContext *)malloc(sizeof(VmafContext));
 
     // fill context with data
-    vmafContext->format = fmt;
+    vmafContext->pix_fmt = pix_fmt;
+
     vmafContext->width = width;
     vmafContext->height = height;
 
+    vmafContext->log_path = log_path;
+
     vmafContext->model_path = model_path;
     vmafContext->additional_model_paths = additional_model_paths;
-    vmafContext->log_path = log_path;
-    vmafContext->log_fmt = log_fmt;
     vmafContext->disable_clip = disable_clip;
     vmafContext->disable_avx = disable_avx;
-    vmafContext->enable_transform = enable_transform || phone_model;
-    vmafContext->do_psnr = do_psnr;
-    vmafContext->do_ssim = do_ssim;
-    vmafContext->do_ms_ssim = do_ms_ssim;
+    vmafContext->enable_transform = enable_transform;
+    vmafContext->enable_conf_interval = enable_conf_interval;
+
+    vmafContext->log_fmt = log_fmt;
+    vmafContext->vmaf_feature_setting = vmaf_feature_setting;
     vmafContext->pool_method = pool_method;
+
     vmafContext->n_thread = n_thread;
     vmafContext->n_subsample = n_subsample;
-    vmafContext->enable_conf_interval = enable_conf_interval;
-    vmafContext->use_color = use_color;
 
     /* Run VMAF */
     ret = compute_vmaf(&score, read_frame, read_vmaf_picture, s, vmafContext);
@@ -240,7 +241,6 @@ fail_or_end:
 
 int main(int argc, char *argv[])
 {
-    char* fmt;
     int width;
     int height;
     char* ref_path;
@@ -248,16 +248,15 @@ int main(int argc, char *argv[])
     char *model_path;
     char *additional_model_paths;
     char *log_path = NULL;
-    char *log_fmt = NULL;
+
+    enum VmafPixelFormat pix_fmt = VMAF_PIX_FMT_UNKNOWN;
+    enum VmafLogFmt log_fmt = VMAF_LOG_FMT_XML;
+    enum VmafPoolingMethod pool_method = VMAF_POOL_MEAN;
+
     bool disable_clip = false;
     bool disable_avx = false;
     bool enable_transform = false;
-    bool phone_model = false;
-    bool do_psnr = false;
-    bool do_ssim = false;
-    bool do_ms_ssim = false;
-    bool use_color = false;
-    char *pool_method = NULL;
+
     int n_thread = 0;
     int n_subsample = 1;
     bool enable_conf_interval = false;
@@ -274,7 +273,38 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    fmt = argv[1];
+    char *pix_fmt_option = argv[1];
+
+    if (!strcmp(pix_fmt_option, "yuv420p"))
+    {
+        pix_fmt = VMAF_PIX_FMT_YUV420P;
+    }
+    else if (!strcmp(pix_fmt_option, "yuv422p"))
+    {
+        pix_fmt = VMAF_PIX_FMT_YUV422P;
+    }
+        else if (!strcmp(pix_fmt_option, "yuv444p"))
+    {
+        pix_fmt = VMAF_PIX_FMT_YUV444P;
+    }
+        else if (!strcmp(pix_fmt_option, "yuv420p10le"))
+    {
+        pix_fmt = VMAF_PIX_FMT_YUV420P10LE;
+    }
+        else if (!strcmp(pix_fmt_option, "yuv422p10le"))
+    {
+        pix_fmt = VMAF_PIX_FMT_YUV422P10LE;
+    }
+        else if (!strcmp(pix_fmt_option, "yuv444p10le"))
+    {
+        pix_fmt = VMAF_PIX_FMT_YUV444P10LE;
+    }
+    else
+    {
+        fprintf(stderr, "Unknown format %s.\n", pix_fmt_option);
+        print_usage(argc, argv);
+        return -1;
+    }
 
     try
     {
@@ -301,11 +331,20 @@ int main(int argc, char *argv[])
 
     log_path = getCmdOption(argv + 7, argv + argc, "--log");
 
-    log_fmt = getCmdOption(argv + 7, argv + argc, "--log-fmt");
-    if (log_fmt != NULL && !(strcmp(log_fmt, "xml")==0 || strcmp(log_fmt, "json")==0 || strcmp(log_fmt, "csv") == 0))
+    char *log_fmt_option = getCmdOption(argv + 7, argv + argc, "--log-fmt");
+    if (log_fmt_option != NULL && !(strcmp(log_fmt_option, "xml") == 0 || strcmp(log_fmt_option, "json") == 0 || strcmp(log_fmt_option, "csv") == 0))
     {
-        fprintf(stderr, "Error: log_fmt must be xml, json or csv, but is %s\n", log_fmt);
+        fprintf(stderr, "Error: log_fmt must be xml, json or csv, but is %s\n", log_fmt_option);
         return -1;
+    }
+
+    if ((log_fmt_option != NULL) && (strcmp(log_fmt_option, "json") == 0))
+    {
+        log_fmt = VMAF_LOG_FMT_JSON;
+    }
+    else if ((log_fmt_option != NULL) && (strcmp(log_fmt_option, "csv") == 0))
+    {
+        log_fmt = VMAF_LOG_FMT_CSV;
     }
 
     temp = getCmdOption(argv + 7, argv + argc, "--thread");
@@ -365,36 +404,44 @@ int main(int argc, char *argv[])
         enable_transform = true;
     }
 
-    if (cmdOptionExists(argv + 7, argv + argc, "--phone-model"))
-    {
-        phone_model = true;
-    }
+    // populate VmafFeatureSetting
+
+    int vmaf_feature_setting = VMAF_FEATURE_SETTING_DO_NONE;
 
     if (cmdOptionExists(argv + 7, argv + argc, "--psnr"))
     {
-        do_psnr = true;
+        vmaf_feature_setting |= VMAF_FEATURE_SETTING_DO_PSNR;
     }
 
     if (cmdOptionExists(argv + 7, argv + argc, "--ssim"))
     {
-        do_ssim = true;
+        vmaf_feature_setting |= VMAF_FEATURE_SETTING_DO_SSIM;
     }
 
     if (cmdOptionExists(argv + 7, argv + argc, "--ms-ssim"))
     {
-        do_ms_ssim = true;
+        vmaf_feature_setting |= VMAF_FEATURE_SETTING_DO_MS_SSIM;
     }
 
     if (cmdOptionExists(argv + 7, argv + argc, "--color"))
     {
-        use_color = true;
+        vmaf_feature_setting |= VMAF_FEATURE_SETTING_DO_COLOR;
     }
 
-    pool_method = getCmdOption(argv + 7, argv + argc, "--pool");
-    if (pool_method != NULL && !(strcmp(pool_method, "min")==0 || strcmp(pool_method, "harmonic_mean")==0 || strcmp(pool_method, "mean")==0))
+    char *pool_method_option = getCmdOption(argv + 7, argv + argc, "--pool");
+    if (pool_method_option != NULL && !(strcmp(pool_method_option, "min") == 0 || strcmp(pool_method_option, "harmonic_mean") == 0 || strcmp(pool_method_option, "mean") == 0))
     {
-        fprintf(stderr, "Error: pool_method must be min, harmonic_mean or mean, but is %s\n", pool_method);
+        fprintf(stderr, "Error: pool_method must be min, harmonic_mean or mean, but is %s\n", pool_method_option);
         return -1;
+    }
+
+    if ((pool_method_option != NULL) && (strcmp(pool_method_option, "min") == 0))
+    {
+        pool_method = VMAF_POOL_MIN;
+    }
+    else if ((pool_method_option != NULL) && (strcmp(pool_method_option, "harmonic_mean") == 0))
+    {
+        pool_method = VMAF_POOL_HARMONIC_MEAN;
     }
 
     additional_model_paths = getCmdOption(argv + 7, argv + argc, "--additional-models");
@@ -407,20 +454,18 @@ int main(int argc, char *argv[])
     try
     {
 #if MEM_LEAK_TEST_ENABLE
-		for(itr_ctr=0;itr_ctr<1000;itr_ctr++)
+		for(itr_ctr = 0; itr_ctr < 1000; itr_ctr ++)
 		{
-			getMemory(itr_ctr,1);
-			ret = run_wrapper(fmt, width, height, ref_path, dis_path, model_path, additional_model_paths,
-                log_path, log_fmt, disable_clip, disable_avx, enable_transform, phone_model,
-                do_psnr, do_ssim, do_ms_ssim, pool_method, n_thread, n_subsample, enable_conf_interval,
-                use_color);
-			getMemory(itr_ctr,2);
+			getMemory(itr_ctr, 1);
+			ret = run_wrapper(pix_fmt, width, height, ref_path, dis_path, model_path, additional_model_paths,
+                log_path, log_fmt, disable_clip, disable_avx, enable_transform,
+                vmaf_feature_setting, pool_method, n_thread, n_subsample, enable_conf_interval);
+			getMemory(itr_ctr, 2);
 		}
 #else
-        return run_wrapper(fmt, width, height, ref_path, dis_path, model_path, additional_model_paths,
-                log_path, log_fmt, disable_clip, disable_avx, enable_transform, phone_model,
-                do_psnr, do_ssim, do_ms_ssim, pool_method, n_thread, n_subsample, enable_conf_interval,
-                use_color);
+        return run_wrapper(pix_fmt, width, height, ref_path, dis_path, model_path, additional_model_paths,
+                log_path, log_fmt, disable_clip, disable_avx, enable_transform,
+                vmaf_feature_setting, pool_method, n_thread, n_subsample, enable_conf_interval);
 #endif
     }
     catch (const std::exception &e)

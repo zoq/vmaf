@@ -11,6 +11,7 @@ PTOOLSDIR = $(TOP)/../ptools
 INSTALL_PREFIX = /usr/local
 INCLUDES += -I$(TOP)/../feature/src
 INCLUDES += -I$(TOP)/../feature/src/common
+LIBVMAF_HEADER = $(TOP)/src
 
 OBJS = \
 	$(OBJDIR)/alloc.o \
@@ -72,7 +73,7 @@ $(OBJDIR)/file_io.o: $(FEATURESRCDIR)/common/file_io.c
 	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) $<
 
 $(OBJDIR)/frame.o: $(FEATURESRCDIR)/common/frame.c
-	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) $<
+	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) -I $(LIBVMAF_HEADER) $<
 
 $(OBJDIR)/convolution.o: $(FEATURESRCDIR)/common/convolution.c
 	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) $(INCLUDES) $<
@@ -84,7 +85,7 @@ $(OBJDIR)/convolution_avx.o: $(FEATURESRCDIR)/common/convolution_avx.c
 	$(CC) -c -o $@ $(EXTRA_CFLAGS) $(CFLAGS) $(CPPFLAGS) $(INCLUDES) $<
 
 $(OBJDIR)/psnr_tools.o: $(FEATURESRCDIR)/psnr_tools.c
-	$(CC) -c -o $@ $(EXTRA_CFLAGS) $(CFLAGS) $(CPPFLAGS) $<
+	$(CC) -c -o $@ $(EXTRA_CFLAGS) $(CFLAGS) $(CPPFLAGS) -I $(LIBVMAF_HEADER) $<
 
 $(OBJDIR)/adm.o: $(FEATURESRCDIR)/adm.c
 	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) $<
@@ -93,7 +94,7 @@ $(OBJDIR)/adm_tools.o: $(FEATURESRCDIR)/adm_tools.c
 	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) $<
 
 $(OBJDIR)/ansnr.o: $(FEATURESRCDIR)/ansnr.c
-	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) $<
+	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) -I $(LIBVMAF_HEADER) $<
 
 $(OBJDIR)/ansnr_tools.o: $(FEATURESRCDIR)/ansnr_tools.c
 	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) $<
@@ -108,7 +109,7 @@ $(OBJDIR)/motion.o: $(FEATURESRCDIR)/motion.c
 	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) $<
 
 $(OBJDIR)/psnr.o: $(FEATURESRCDIR)/psnr.c
-	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) $<
+	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) -I $(LIBVMAF_HEADER) $<
 
 $(OBJDIR)/math_utils.o: $(FEATURESRCDIR)/iqa/math_utils.c
 	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) $<
@@ -132,7 +133,7 @@ $(OBJDIR)/moment.o: $(FEATURESRCDIR)/moment.c
 	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) $<
 
 $(OBJDIR)/all.o: $(FEATURESRCDIR)/all.c
-	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) $<
+	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) -I $(LIBVMAF_HEADER) $<
 
 $(OBJDIR)/blur_array.o: $(FEATURESRCDIR)/common/blur_array.c
 	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) $<
@@ -156,10 +157,10 @@ $(OBJDIR)/vmaf.o: $(SRCDIR)/vmaf.cpp
 	-I $(PTOOLSDIR)/opencontainers_1_8_4/include -I $(FEATURESRCDIR) -I $(FEATURESRCDIR)/common $<
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
-	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) -I $(FEATURESRCDIR) $<
+	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) -I $(FEATURESRCDIR) -I $(LIBVMAF_HEADER) $<
 
 $(OBJDIR)/%.o: $(SRCDIR)/pugixml/%.cpp
-	$(CXX) -c -o $@ $(CXXFLAGS) $(CPPFLAGS) $<
+	$(CXX) -c -o $@ $(CXXFLAGS) $(CPPFLAGS) -I $(LIBVMAF_HEADER) $<
 
 $(LIBVMAF): $(OBJS) $(wildcard ../ptools/*.o)
 	ar rcs $@ $^

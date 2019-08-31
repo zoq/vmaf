@@ -21,13 +21,13 @@
 #include <cstdio>
 #include "cpu.h"
 
-Asset::Asset(int w, int h, const char *fmt)
+Asset::Asset(int w, int h, enum VmafPixelFormat fmt)
     :w(w), h(h), fmt(fmt) 
 {
 }
 
 Asset::Asset(int w, int h) 
-    :w(w), h(h), fmt("yuv420p") 
+    :w(w), h(h), fmt(VMAF_PIX_FMT_YUV420P)
 {
 }
 
@@ -41,7 +41,7 @@ int Asset::getHeight()
     return h; 
 }
 
-const char* Asset::getFmt()
+enum VmafPixelFormat Asset::getFmt()
 { 
     return fmt; 
 }
@@ -207,7 +207,7 @@ std::vector<std::string> Result::get_keys()
     return v;
 }
 
-int Result::get_num_frms()
+unsigned int Result::get_num_frms()
 {
     return num_frms;
 }

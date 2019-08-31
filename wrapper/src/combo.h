@@ -27,7 +27,7 @@ extern "C" {
 
 #include "darray.h"
 #include "common/blur_array.h"
-#include "common/picture.h"
+#include "libvmaf.h"
 
 #ifdef MULTI_THREADING
 #include "pthread.h"
@@ -40,7 +40,7 @@ typedef struct
     void *user_data;
     int w;
     int h;
-    const char *fmt;
+    enum VmafPixelFormat fmt;
     DArray *adm_num_array;
     DArray *adm_den_array;
     DArray *adm_num_scale0_array;
@@ -69,7 +69,7 @@ typedef struct
     DArray *ms_ssim_array;
     char *errmsg;
     int n_subsample;
-    int use_color;
+    bool use_color;
 
     int frm_idx;
     int stride, stride_u, stride_v;
@@ -96,7 +96,7 @@ void* combo_threadfunc(void* vmaf_thread_data);
 
 int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
         int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),
-        void *user_data, int w, int h, const char *fmt,
+        void *user_data, int w, int h, enum VmafPixelFormat fmt,
         DArray *adm_num_array,
         DArray *adm_den_array,
         DArray *adm_num_scale0_array,
@@ -126,7 +126,7 @@ int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
         char *errmsg,
         int n_thread,
         int n_subsample,
-        int use_color
+        bool use_color
 );
 
 #ifdef __cplusplus

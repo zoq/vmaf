@@ -75,7 +75,7 @@ void* combo_threadfunc(void* vmaf_thread_data)
     void* user_data = thread_data->user_data;
     const char* fmt = thread_data->fmt;
     int n_subsample = thread_data->n_subsample;
-    int use_color = thread_data->use_color;
+    bool use_color = thread_data->use_color;
 
     double score = 0;
     double score2 = 0;
@@ -778,7 +778,7 @@ fail_or_end:
 
 int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
         int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),
-        void *user_data, int w, int h, const char *fmt,
+        void *user_data, int w, int h, enum VmafPixelFormat fmt,
         DArray *adm_num_array,
         DArray *adm_den_array,
         DArray *adm_num_scale0_array,
@@ -808,9 +808,10 @@ int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
         char *errmsg,
         int n_thread,
         int n_subsample,
-        int use_color
+        bool use_color
         )
 {
+
     // init shared thread data
     VMAF_THREAD_STRUCT combo_thread_data;
     combo_thread_data.read_frame = read_frame;
@@ -972,7 +973,7 @@ int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
 
 int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
         int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),
-        void *user_data, int w, int h, const char *fmt,
+        void *user_data, int w, int h, enum VmafPixelFormat fmt,
         DArray *adm_num_array,
         DArray *adm_den_array,
         DArray *adm_num_scale0_array,
@@ -1002,7 +1003,7 @@ int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
         char *errmsg,
         int n_thread,
         int n_subsample,
-        int use_color
+        bool use_color
         )
 {
     VMAF_THREAD_STRUCT combo_thread_data;

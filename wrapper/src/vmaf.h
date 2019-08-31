@@ -32,7 +32,6 @@
 #include <memory>
 #include <vector>
 
-#include "picture.h"
 #include "svm.h"
 #include "chooseser.h"
 #include "darray.h"
@@ -69,6 +68,74 @@ enum VmafPredictionReturnType
     MINUS_DELTA
 };
 
+class Asset
+{
+public:
+    Asset(int w, int h, enum VmafPixelFormat fmt);
+    Asset(int w, int h);
+    int getWidth();
+    int getHeight();
+    enum VmafPixelFormat getFmt();
+private:
+    const int w, h;
+    enum VmafPixelFormat fmt;
+};
+
+enum ScoreAggregateMethod
+{
+    MEAN,
+    HARMONIC_MEAN,
+    MINIMUM
+};
+
+class StatVector
+{
+public:
+    StatVector();
+    StatVector(std::vector<double> l);
+    std::vector<double> getVector();
+    double mean();
+    double minimum();
+    double harmonic_mean();
+    double second_moment();
+    double percentile(double perc);
+    double var();
+    double std();
+    void append(double e);
+    double at(size_t idx);
+    size_t size();
+private:
+    std::vector<double> l;
+    void _assert_size();
+};
+
+class Result
+{
+public:
+    Result();
+    void set_scores(const std::string &key, const StatVector &scores);
+    StatVector get_scores(const std::string &key);
+    bool has_scores(const std::string &key);
+    double get_score(const std::string &key);
+    std::vector<std::string> get_keys();
+    void setScoreAggregateMethod(ScoreAggregateMethod scoreAggregateMethod);
+    unsigned int get_num_frms();
+    void set_num_frms(int num_frms);
+private:
+    std::map<std::string, StatVector> d;
+    ScoreAggregateMethod score_aggregate_method;
+    unsigned int num_frms;
+};
+
+struct ModelPredictionContext
+{
+    int enable_conf_interval;
+    int enable_transform;
+    int disable_clip;
+    const char *model_name;
+    const char *model_path;
+};
+
 struct VmafPredictionStruct
 {
     std::map<VmafPredictionReturnType, double> vmafPrediction;
@@ -82,6 +149,18 @@ struct AdditionalModelStruct
     bool disable_clip;
     string model_name;
     string model_path;
+};
+
+class IVmafQualityRunner {
+public:
+    virtual void predict(Result &result, ModelPredictionContext *mp_ctx) = 0;
+    virtual ~IVmafQualityRunner() {}
+};
+
+class VmafQualityRunnerFactory {
+public:
+    static std::unique_ptr<IVmafQualityRunner>
+        createVmafQualityRunner(ModelPredictionContext *mp_ctx);
 };
 
 class LibsvmNusvrTrainTestModel

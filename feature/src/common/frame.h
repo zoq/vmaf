@@ -20,11 +20,11 @@
 #define FRAME_H_
 
 #include "alloc.h"
-#include "picture.h"
+#include "libvmaf.h"
 
 struct data
 {
-    char* format; /* yuv420p, yuv422p, yuv444p, yuv420p10le, yuv422p10le, yuv444p10le */
+    enum VmafPixelFormat format; /* yuv420p, yuv422p, yuv444p, yuv420p10le, yuv422p10le, yuv444p10le */
     int width;
     int height;
     size_t offset;
@@ -36,7 +36,7 @@ struct data
 
 struct noref_data
 {
-    char* format; /* yuv420p, yuv422p, yuv444p, yuv420p10le, yuv422p10le, yuv444p10le */
+    enum VmafPixelFormat format; /* yuv420p, yuv422p, yuv444p, yuv420p10le, yuv422p10le, yuv444p10le */
     int width;
     int height;
     size_t offset;
@@ -49,9 +49,9 @@ int read_vmaf_picture(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, fl
 
 int read_noref_frame(float *dis_data, float *temp_data, int stride_byte, void *s);
 
-int get_frame_offset(const char *fmt, int w, int h, size_t *offset);
+int get_frame_offset(enum VmafPixelFormat fmt, int w, int h, size_t *offset);
 
-int get_color_resolution(const char *fmt, int w, int h, size_t *w_u, size_t *h_u, size_t *w_v, size_t *h_v);
+int get_color_resolution(enum VmafPixelFormat fmt, int w, int h, size_t *w_u, size_t *h_u, size_t *w_v, size_t *h_v);
 
 int get_stride_byte_from_width(int w);
 

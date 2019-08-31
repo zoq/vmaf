@@ -32,38 +32,68 @@
 extern "C" {
 #endif
 
-typedef struct {
-    int width;
-    int height;
-    int n_thread;
-    int n_subsample;
-    int disable_clip;
-    int disable_avx;
-    int enable_transform;
-    int phone_model;
-    int do_psnr;
-    int do_ssim;
-    int do_ms_ssim;
-    int enable_conf_interval;
-    int use_color;
-    char *format;
-    char *model_path;
-    char *additional_model_paths;
-    char *log_path;
-    char *log_fmt;
-    char *pool_method;
-} VmafContext;
-
-struct ModelPredictionContext
-{
-    int enable_conf_interval;
-    int enable_transform;
-    int disable_clip;
-    const char *model_name;
-    const char *model_path;
+enum VmafLogFmt {
+    VMAF_LOG_FMT_XML  = (1 << 0),
+    VMAF_LOG_FMT_JSON = (1 << 1),
+    VMAF_LOG_FMT_CSV  = (1 << 2),
 };
 
-#include "picture.h"
+enum VmafPoolingMethod {
+    VMAF_POOL_MIN              = (1 << 0),
+    VMAF_POOL_MEAN             = (1 << 1),
+    VMAF_POOL_HARMONIC_MEAN    = (1 << 2),
+};
+
+enum VmafFeatureSetting {
+    VMAF_FEATURE_SETTING_DO_NONE       = (1 << 0),
+    VMAF_FEATURE_SETTING_DO_PSNR       = (1 << 1),
+    VMAF_FEATURE_SETTING_DO_SSIM       = (1 << 2),
+    VMAF_FEATURE_SETTING_DO_MS_SSIM    = (1 << 3),
+    VMAF_FEATURE_SETTING_DO_COLOR      = (1 << 4),
+};
+
+enum VmafPixelFormat {
+    VMAF_PIX_FMT_YUV420P         = 0,
+    VMAF_PIX_FMT_YUV422P         = 1,
+    VMAF_PIX_FMT_YUV444P         = 2,
+    VMAF_PIX_FMT_YUV420P10LE     = 3,
+    VMAF_PIX_FMT_YUV422P10LE     = 4,
+    VMAF_PIX_FMT_YUV444P10LE     = 5,
+    VMAF_PIX_FMT_UNKNOWN         = 6,
+};
+
+typedef struct VmafPicture
+{
+    float *data_y;
+    float *data_u;
+    float *data_v;
+//    VmafPixelFormat pix_fmt;
+} VmafPicture;
+
+typedef struct {
+
+    int enable_transform;
+    int disable_clip;
+    int disable_avx;
+    int enable_conf_interval;
+
+    int n_thread;
+    int n_subsample;
+
+    int width;
+    int height;
+
+    char *model_path;
+    char *additional_model_paths;
+
+    char *log_path;
+    int vmaf_feature_setting;
+
+    enum VmafPixelFormat pix_fmt;
+    enum VmafLogFmt log_fmt;
+    enum VmafPoolingMethod pool_method;
+
+} VmafContext;
 
 int compute_vmaf(double* vmaf_score,
                  int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride_byte, void *user_data),
@@ -72,87 +102,6 @@ int compute_vmaf(double* vmaf_score,
 
 #ifdef __cplusplus
 }
-#endif
-
-#ifdef __cplusplus
-#include <vector>
-#include <cstring>
-#include <map>
-#include <memory>
-#include <string>
-
-class Asset
-{
-public:
-    Asset(int w, int h, const char *fmt);
-    Asset(int w, int h);
-    int getWidth();
-    int getHeight();
-    const char* getFmt();
-private:
-    const int w, h;
-    const char *fmt;
-};
-
-enum ScoreAggregateMethod
-{
-    MEAN,
-    HARMONIC_MEAN,
-    MINIMUM
-};
-
-class StatVector
-{
-public:
-    StatVector();
-    StatVector(std::vector<double> l);
-    std::vector<double> getVector();
-    double mean();
-    double minimum();
-    double harmonic_mean();
-    double second_moment();
-    double percentile(double perc);
-    double var();
-    double std();
-    void append(double e);
-    double at(size_t idx);
-    size_t size();
-private:
-    std::vector<double> l;
-    void _assert_size();
-};
-
-
-class Result
-{
-public:
-    Result();
-    void set_scores(const std::string &key, const StatVector &scores);
-    StatVector get_scores(const std::string &key);
-    bool has_scores(const std::string &key);
-    double get_score(const std::string &key);
-    std::vector<std::string> get_keys();
-    void setScoreAggregateMethod(ScoreAggregateMethod scoreAggregateMethod);
-    int get_num_frms();
-    void set_num_frms(int num_frms);
-private:
-    std::map<std::string, StatVector> d;
-    ScoreAggregateMethod score_aggregate_method;
-    int num_frms;
-};
-
-class IVmafQualityRunner {
-public:
-    virtual void predict(Result &result, ModelPredictionContext *mp_ctx) = 0;
-    virtual ~IVmafQualityRunner() {}
-};
-
-class VmafQualityRunnerFactory {
-public:
-    static std::unique_ptr<IVmafQualityRunner> 
-        createVmafQualityRunner(ModelPredictionContext *mp_ctx);
-};
-
 #endif
 
 #endif /* _LIBVMAF_H */

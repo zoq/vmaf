@@ -25,8 +25,8 @@
 #include <sstream>
 #include <cmath>
 #include <iomanip>
-#include "libvmaf.h"
 
+#include "libvmaf.h"
 #include "vmaf.h"
 #include "combo.h"
 #include "pugixml/pugixml.hpp"
@@ -46,8 +46,56 @@
 template <class T> static inline T min(T x,T y) { return (x<y)?x:y; }
 #endif
 
+static const int BOOTSTRAP_MODEL_NAME_PRECISION = 4;
+
 inline double _round_to_digit(double val, int digit);
 std::string _get_file_name(const std::string& s);
+
+inline double _round(double val)
+{
+    if( val < 0 ) return ceil(val - 0.5);
+    return floor(val + 0.5);
+}
+
+inline double _round_to_digit(double val, int digit)
+{
+    size_t m = pow(10.0, digit);
+    return _round(val * m) / m;
+}
+
+std::string _get_file_name(const std::string& s)
+{
+    size_t i = s.find_last_of("/\\", s.length());
+    if (i != std::string::npos) {
+        return(s.substr(i + 1, s.length() - i));
+    }
+    return("");
+}
+
+std::string to_zero_lead(const int value, const unsigned precision)
+{
+     std::ostringstream oss;
+     oss << std::setw(precision) << std::setfill('0') << value;
+     return oss.str();
+}
+
+std::string pooling_enum_to_string(VmafPoolingMethod e) {
+    switch (e) {
+        case VmafPoolingMethod::VMAF_POOL_MIN: return "min";
+        case VmafPoolingMethod::VMAF_POOL_MEAN: return "mean";
+        case VmafPoolingMethod::VMAF_POOL_HARMONIC_MEAN: return "harmonic_mean";
+        default: return "";
+    }
+}
+
+void _replace_string_in_place(std::string& subject, const std::string& search,
+                          const std::string& replace) {
+    size_t pos = 0;
+    while ((pos = subject.find(search, pos)) != std::string::npos) {
+         subject.replace(pos, search.length(), replace);
+         pos += replace.length();
+    }
+}
 
 void SvmDelete::operator()(void *svm)
 {
@@ -561,15 +609,6 @@ void VmafQualityRunner::_set_prediction_result(
     result.set_scores(model_name, score);
 }
 
-void _replace_string_in_place(std::string& subject, const std::string& search,
-                          const std::string& replace) {
-    size_t pos = 0;
-    while ((pos = subject.find(search, pos)) != std::string::npos) {
-         subject.replace(pos, search.length(), replace);
-         pos += replace.length();
-    }
-}
-
 std::vector<AdditionalModelStruct> _get_additional_model_structs(char *model_paths)
 {
     AdditionalModelStruct additional_model_struct;
@@ -648,7 +687,7 @@ void VmafQualityRunner::feature_extract(Result &result, Asset asset,
     dbg_printf("Initialize storage arrays...\n");
     int w = asset.getWidth();
     int h = asset.getHeight();
-    const char* fmt = asset.getFmt();
+    enum VmafPixelFormat fmt = asset.getFmt();
     char errmsg[1024];
     DArray adm_num_array, adm_den_array, adm_num_scale0_array,
             adm_den_scale0_array, adm_num_scale1_array, adm_den_scale1_array,
@@ -690,22 +729,25 @@ void VmafQualityRunner::feature_extract(Result &result, Asset asset,
     init_array(&ms_ssim_array, INIT_FRAMES);
 
     /* optional output arrays */
-    if (vmafContext->do_psnr) {
+    if (vmafContext->vmaf_feature_setting & VMAF_FEATURE_SETTING_DO_PSNR) {
         psnr_array_ptr = &psnr_array;
     } else {
         psnr_array_ptr = NULL;
     }
-    if (vmafContext->do_ssim) {
+    if (vmafContext->vmaf_feature_setting & VMAF_FEATURE_SETTING_DO_SSIM) {
         ssim_array_ptr = &ssim_array;
     } else {
         ssim_array_ptr = NULL;
     }
-    if (vmafContext->do_ms_ssim) {
+    if (vmafContext->vmaf_feature_setting & VMAF_FEATURE_SETTING_DO_MS_SSIM) {
         ms_ssim_array_ptr = &ms_ssim_array;
     } else {
         ms_ssim_array_ptr = NULL;
     }
-    if (vmafContext->use_color) {
+
+    bool use_color = vmafContext->vmaf_feature_setting & VMAF_FEATURE_SETTING_DO_COLOR;
+
+    if (vmafContext->vmaf_feature_setting & VMAF_FEATURE_SETTING_DO_COLOR) {
         psnr_u_array_ptr = &psnr_u_array;
         psnr_v_array_ptr = &psnr_v_array;
     } else {
@@ -724,10 +766,11 @@ void VmafQualityRunner::feature_extract(Result &result, Asset asset,
             &vif_den_scale3_array, &vif_array,
             psnr_array_ptr, psnr_u_array_ptr, psnr_v_array_ptr, ssim_array_ptr,
             ms_ssim_array_ptr, errmsg, vmafContext->n_thread, vmafContext->n_subsample,
-            vmafContext->use_color);
+            use_color);
     if (ret) {
         throw VmafException(errmsg);
     }
+
     size_t num_frms = motion_array.used;
     bool num_frms_is_consistent = (adm_num_array.used == num_frms)
             && (adm_den_array.used == num_frms)
@@ -1032,15 +1075,6 @@ void BootstrapVmafQualityRunner::_postproc_transform_clip(
     scoreStdDev *= slope;
 }
 
-static const int BOOTSTRAP_MODEL_NAME_PRECISION = 4;
-
-std::string to_zero_lead(const int value, const unsigned precision)
-{
-     std::ostringstream oss;
-     oss << std::setw(precision) << std::setfill('0') << value;
-     return oss.str();
-}
-
 void BootstrapVmafQualityRunner::_set_prediction_result(
         std::vector<VmafPredictionStruct> predictionStructs,
         Result& result, std::string model_name) {
@@ -1101,7 +1135,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         throw VmafException("Invalid n_subsample value (must be > 0)");
     }
 
-    Asset asset(vmafContext->width, vmafContext->height, vmafContext->format);
+    Asset asset(vmafContext->width, vmafContext->height, vmafContext->pix_fmt);
 
     ModelPredictionContext *mp_ctx;
     mp_ctx = (ModelPredictionContext *)malloc(sizeof(ModelPredictionContext));
@@ -1162,11 +1196,11 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
 
     timer.stop();
 
-    if (vmafContext->pool_method != NULL && (strcmp(vmafContext->pool_method, "min")==0))
+    if (vmafContext->pool_method != NULL && (vmafContext->pool_method == VMAF_POOL_MIN))
     {
         result.setScoreAggregateMethod(ScoreAggregateMethod::MINIMUM);
     }
-    else if (vmafContext->pool_method != NULL && (strcmp(vmafContext->pool_method, "harmonic_mean")==0))
+    else if (vmafContext->pool_method != NULL && (vmafContext->pool_method == VMAF_POOL_HARMONIC_MEAN))
     {
         result.setScoreAggregateMethod(ScoreAggregateMethod::HARMONIC_MEAN);
     }
@@ -1203,49 +1237,31 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
     if (result.has_scores("ms_ssim"))
         aggregate_ms_ssim = result.get_score("ms_ssim");
 
-    if (vmafContext->pool_method)
-    {
-        printf("VMAF score (%s) = %f\n", vmafContext->pool_method, aggregate_vmaf);
-        if (aggregate_bagging)
-            printf("VMAF Bagging score (%s) = %f\n", vmafContext->pool_method, aggregate_bagging);
-        if (aggregate_stddev)
-            printf("VMAF StdDev score (%s) = %f\n", vmafContext->pool_method, aggregate_stddev);
-        if (aggregate_ci95_low)
-            printf("VMAF CI95_low score (%s) = %f\n", vmafContext->pool_method, aggregate_ci95_low);
-        if (aggregate_ci95_high)
-            printf("VMAF CI95_high score (%s) = %f\n", vmafContext->pool_method, aggregate_ci95_high);
-        if (aggregate_psnr)
-            printf("PSNR score (%s) = %f\n", vmafContext->pool_method, aggregate_psnr);
-        if (aggregate_ssim)
-            printf("SSIM score (%s) = %f\n", vmafContext->pool_method, aggregate_ssim);
-        if (aggregate_ms_ssim)
-            printf("MS-SSIM score (%s) = %f\n", vmafContext->pool_method, aggregate_ms_ssim);
-    }
-    else // default
-    {
-        printf("VMAF score = %f\n", aggregate_vmaf);
-        if (aggregate_bagging)
-            printf("VMAF Bagging score = %f\n", aggregate_bagging);
-        if (aggregate_stddev)
-            printf("VMAF StdDev score = %f\n", aggregate_stddev);
-        if (aggregate_ci95_low)
-            printf("VMAF CI95_low score = %f\n", aggregate_ci95_low);
-        if (aggregate_ci95_high)
-            printf("VMAF CI95_high score = %f\n", aggregate_ci95_high);
-        if (aggregate_psnr)
-            printf("PSNR score = %f\n", aggregate_psnr);
-        if (aggregate_ssim)
-            printf("SSIM score = %f\n", aggregate_ssim);
-        if (aggregate_ms_ssim)
-            printf("MS-SSIM score = %f\n", aggregate_ms_ssim);
-    }
+    std::string pool_method_str = pooling_enum_to_string(vmafContext->pool_method);
+
+    printf("VMAF score (%s) = %f\n", pool_method_str.c_str(), aggregate_vmaf);
+    if (aggregate_bagging)
+        printf("VMAF Bagging score (%s) = %f\n", pool_method_str.c_str(), aggregate_bagging);
+    if (aggregate_stddev)
+        printf("VMAF StdDev score (%s) = %f\n", pool_method_str.c_str(), aggregate_stddev);
+    if (aggregate_ci95_low)
+        printf("VMAF CI95_low score (%s) = %f\n", pool_method_str.c_str(), aggregate_ci95_low);
+    if (aggregate_ci95_high)
+        printf("VMAF CI95_high score (%s) = %f\n", pool_method_str.c_str(), aggregate_ci95_high);
+    if (aggregate_psnr)
+        printf("PSNR score (%s) = %f\n", pool_method_str.c_str(), aggregate_psnr);
+    if (aggregate_ssim)
+        printf("SSIM score (%s) = %f\n", pool_method_str.c_str(), aggregate_ssim);
+    if (aggregate_ms_ssim)
+        printf("MS-SSIM score (%s) = %f\n", pool_method_str.c_str(), aggregate_ms_ssim);
 
     // print out additional models (if any)
     if (vmafContext->additional_model_paths != NULL) {
         int num_additional_models = additional_model_structs.size();
         for (int additional_model_ind = 0; additional_model_ind < num_additional_models; additional_model_ind++)
         {
-            printf("%s score = %f\n", additional_model_structs.at(additional_model_ind).model_name.c_str(),
+            printf("%s score (%s) = %f\n", additional_model_structs.at(additional_model_ind).model_name.c_str(),
+                pool_method_str.c_str(),
                 result.get_score(additional_model_structs.at(additional_model_ind).model_name.c_str()));
         }
     }
@@ -1274,7 +1290,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         }
     }
 
-    if (vmafContext->log_path != NULL && vmafContext->log_fmt !=NULL && (strcmp(vmafContext->log_fmt, "json")==0))
+    if (vmafContext->log_path != NULL && vmafContext->log_fmt != NULL && (vmafContext->log_fmt == VMAF_LOG_FMT_JSON))
     {
         /* output to json */
 
@@ -1329,7 +1345,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         JSONPrint(top, log_file, 0, true, 2);
         log_file.close();
     }
-	else if (vmafContext->log_path != NULL && vmafContext->log_fmt != NULL && (strcmp(vmafContext->log_fmt, "csv") == 0))
+	else if (vmafContext->log_path != NULL && vmafContext->log_fmt != NULL && (vmafContext->log_fmt == VMAF_LOG_FMT_CSV))
 	{
 		/* output to csv */
 		FILE *csv = fopen(vmafContext->log_path, "wt");
@@ -1351,7 +1367,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
 		}
 		fclose(csv);
 	}
-    else if (vmafContext->log_path != NULL)
+    else if ((vmafContext->log_path != NULL) || (vmafContext->log_fmt == VMAF_LOG_FMT_XML))
     {
         /* output to xml */
 
@@ -1406,25 +1422,4 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
     }
 
     return aggregate_vmaf;
-}
-
-inline double _round(double val)
-{
-    if( val < 0 ) return ceil(val - 0.5);
-    return floor(val + 0.5);
-}
-
-inline double _round_to_digit(double val, int digit)
-{
-    size_t m = pow(10.0, digit);
-    return _round(val * m) / m;
-}
-
-std::string _get_file_name(const std::string& s)
-{
-    size_t i = s.find_last_of("/\\", s.length());
-    if (i != std::string::npos) {
-        return(s.substr(i + 1, s.length() - i));
-    }
-    return("");
 }
