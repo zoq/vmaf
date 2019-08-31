@@ -19,10 +19,10 @@ This copies the library header `libvmaf.h` under `usr/local/include`, library `l
 
 ```
 int compute_vmaf(double* vmaf_score, int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
-void *user_data, VmafContext *vmafContext);
+void *user_data, VmafSettings *vmafSettings);
 ```
 
-Here, `read_frame` is a callback function which can be used to pass data from a program to VMAF. `user_data` is a program specific data that can be used by the callback function. `VmafContext is a struct containing relevant parameters for feature extraction and model prediction`. For sample usage of `compute_vmaf`, refer to [`wrapper/src/main.cpp`](../../wrapper/src/main.cpp).
+Here, `read_frame` is a callback function which can be used to pass data from a program to VMAF. `user_data` is a program specific data that can be used by the callback function. `VmafSettings is a struct containing relevant parameters for feature extraction and model prediction`. For sample usage of `compute_vmaf`, refer to [`wrapper/src/main.cpp`](../../wrapper/src/main.cpp).
 
 To test the library, run:
 

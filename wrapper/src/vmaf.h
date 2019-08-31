@@ -42,7 +42,7 @@ static const std::string BOOSTRAP_VMAF_MODEL_KEY = "_bootstrap_";
 
 double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
                int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),
-               void *user_data, VmafContext *vmafContext);
+               void *user_data, VmafSettings *vmafSettings);
 
 class VmafException: public std::exception
 {
@@ -211,7 +211,7 @@ public:
     static void feature_extract(Result &result, Asset asset,
                 int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
                 int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),
-                void *user_data, VmafContext *vmafContext);
+                void *user_data, VmafSettings *vmafSettings);
     virtual void predict(Result &result, ModelPredictionContext *mp_ctx);
     virtual ~VmafQualityRunner() {}
 protected:

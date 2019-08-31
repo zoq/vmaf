@@ -682,7 +682,7 @@ std::vector<AdditionalModelStruct> _get_additional_model_structs(char *model_pat
 void VmafQualityRunner::feature_extract(Result &result, Asset asset,
                         int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
                         int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),
-                        void *user_data, VmafContext *vmafContext)
+                        void *user_data, VmafSettings *vmafSettings)
 {
     dbg_printf("Initialize storage arrays...\n");
     int w = asset.getWidth();
@@ -729,25 +729,25 @@ void VmafQualityRunner::feature_extract(Result &result, Asset asset,
     init_array(&ms_ssim_array, INIT_FRAMES);
 
     /* optional output arrays */
-    if (vmafContext->vmaf_feature_setting & VMAF_FEATURE_SETTING_DO_PSNR) {
+    if (vmafSettings->vmaf_feature_setting & VMAF_FEATURE_SETTING_DO_PSNR) {
         psnr_array_ptr = &psnr_array;
     } else {
         psnr_array_ptr = NULL;
     }
-    if (vmafContext->vmaf_feature_setting & VMAF_FEATURE_SETTING_DO_SSIM) {
+    if (vmafSettings->vmaf_feature_setting & VMAF_FEATURE_SETTING_DO_SSIM) {
         ssim_array_ptr = &ssim_array;
     } else {
         ssim_array_ptr = NULL;
     }
-    if (vmafContext->vmaf_feature_setting & VMAF_FEATURE_SETTING_DO_MS_SSIM) {
+    if (vmafSettings->vmaf_feature_setting & VMAF_FEATURE_SETTING_DO_MS_SSIM) {
         ms_ssim_array_ptr = &ms_ssim_array;
     } else {
         ms_ssim_array_ptr = NULL;
     }
 
-    bool use_color = vmafContext->vmaf_feature_setting & VMAF_FEATURE_SETTING_DO_COLOR;
+    bool use_color = vmafSettings->vmaf_feature_setting & VMAF_FEATURE_SETTING_DO_COLOR;
 
-    if (vmafContext->vmaf_feature_setting & VMAF_FEATURE_SETTING_DO_COLOR) {
+    if (vmafSettings->vmaf_feature_setting & VMAF_FEATURE_SETTING_DO_COLOR) {
         psnr_u_array_ptr = &psnr_u_array;
         psnr_v_array_ptr = &psnr_v_array;
     } else {
@@ -765,7 +765,7 @@ void VmafQualityRunner::feature_extract(Result &result, Asset asset,
             &vif_num_scale2_array, &vif_den_scale2_array, &vif_num_scale3_array,
             &vif_den_scale3_array, &vif_array,
             psnr_array_ptr, psnr_u_array_ptr, psnr_v_array_ptr, ssim_array_ptr,
-            ms_ssim_array_ptr, errmsg, vmafContext->n_thread, vmafContext->n_subsample,
+            ms_ssim_array_ptr, errmsg, vmafSettings->n_thread, vmafSettings->n_subsample,
             use_color);
     if (ret) {
         throw VmafException(errmsg);
@@ -830,7 +830,7 @@ void VmafQualityRunner::feature_extract(Result &result, Asset asset,
     StatVector psnr, psnr_u, psnr_v, ssim, ms_ssim;
 
     int num_frms_subsampled = 0;
-    for (size_t i = 0; i < num_frms; i += vmafContext->n_subsample) {
+    for (size_t i = 0; i < num_frms; i += vmafSettings->n_subsample) {
         adm2.append(
                 (get_at(&adm_num_array, i) + ADM2_CONSTANT)
                         / (get_at(&adm_den_array, i) + ADM2_CONSTANT));
@@ -1114,37 +1114,37 @@ void BootstrapVmafQualityRunner::_set_prediction_result(
 
 double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
                int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),
-               void *user_data, VmafContext *vmafContext)
+               void *user_data, VmafSettings *vmafSettings)
 {
     printf("Start calculating VMAF score...\n");
 
-    if (vmafContext->width <= 0)
+    if (vmafSettings->width <= 0)
     {
         throw VmafException("Invalid width value (must be > 0)");
     }
-    if (vmafContext->height <= 0)
+    if (vmafSettings->height <= 0)
     {
         throw VmafException("Invalid height value (must be > 0)");
     }
-    if (vmafContext->n_thread < 0)
+    if (vmafSettings->n_thread < 0)
     {
         throw VmafException("Invalid n_thread value (must be >= 0)");
     }
-    if (vmafContext->n_subsample <= 0)
+    if (vmafSettings->n_subsample <= 0)
     {
         throw VmafException("Invalid n_subsample value (must be > 0)");
     }
 
-    Asset asset(vmafContext->width, vmafContext->height, vmafContext->pix_fmt);
+    Asset asset(vmafSettings->width, vmafSettings->height, vmafSettings->pix_fmt);
 
     ModelPredictionContext *mp_ctx;
     mp_ctx = (ModelPredictionContext *)malloc(sizeof(ModelPredictionContext));
 
     mp_ctx->model_name = "vmaf";
-    mp_ctx->model_path = vmafContext->model_path;
-    mp_ctx->enable_conf_interval = vmafContext->enable_conf_interval;
-    mp_ctx->enable_transform = vmafContext->enable_transform;
-    mp_ctx->disable_clip = vmafContext->disable_clip;
+    mp_ctx->model_path = vmafSettings->model_path;
+    mp_ctx->enable_conf_interval = vmafSettings->enable_conf_interval;
+    mp_ctx->enable_transform = vmafSettings->enable_transform;
+    mp_ctx->disable_clip = vmafSettings->disable_clip;
 
     std::unique_ptr<IVmafQualityRunner> runner_ptr = VmafQualityRunnerFactory::createVmafQualityRunner(mp_ctx);
 
@@ -1153,7 +1153,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
     Result result;
 
     // feature extraction
-    VmafQualityRunner::feature_extract(result, asset, read_frame, read_vmaf_picture, user_data, vmafContext);
+    VmafQualityRunner::feature_extract(result, asset, read_frame, read_vmaf_picture, user_data, vmafSettings);
 
     // predict using baseline VMAF model
     runner_ptr->predict(result, mp_ctx);
@@ -1162,12 +1162,12 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
 
     // predict using additional models, if any
     std::vector<AdditionalModelStruct> additional_model_structs;
-    if (vmafContext->additional_model_paths != NULL) {
+    if (vmafSettings->additional_model_paths != NULL) {
 
         ModelPredictionContext *additional_mp_ctx;
         additional_mp_ctx = (ModelPredictionContext *)malloc(sizeof(ModelPredictionContext));
 
-        additional_model_structs = _get_additional_model_structs(vmafContext->additional_model_paths);
+        additional_model_structs = _get_additional_model_structs(vmafSettings->additional_model_paths);
 
         int num_additional_models = additional_model_structs.size();
 
@@ -1196,11 +1196,11 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
 
     timer.stop();
 
-    if (vmafContext->pool_method != NULL && (vmafContext->pool_method == VMAF_POOL_MIN))
+    if (vmafSettings->pool_method != NULL && (vmafSettings->pool_method == VMAF_POOL_MIN))
     {
         result.setScoreAggregateMethod(ScoreAggregateMethod::MINIMUM);
     }
-    else if (vmafContext->pool_method != NULL && (vmafContext->pool_method == VMAF_POOL_HARMONIC_MEAN))
+    else if (vmafSettings->pool_method != NULL && (vmafSettings->pool_method == VMAF_POOL_HARMONIC_MEAN))
     {
         result.setScoreAggregateMethod(ScoreAggregateMethod::HARMONIC_MEAN);
     }
@@ -1211,7 +1211,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
 
     size_t num_frames_subsampled = result.get_scores("vmaf").size();
     double aggregate_vmaf = result.get_score("vmaf");
-    double exec_fps = (double)num_frames_subsampled * vmafContext->n_subsample / (double)timer.elapsed();
+    double exec_fps = (double)num_frames_subsampled * vmafSettings->n_subsample / (double)timer.elapsed();
 #if TIME_TEST_ENABLE
 	double time_taken = (double)timer.elapsed();
 #endif
@@ -1237,7 +1237,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
     if (result.has_scores("ms_ssim"))
         aggregate_ms_ssim = result.get_score("ms_ssim");
 
-    std::string pool_method_str = pooling_enum_to_string(vmafContext->pool_method);
+    std::string pool_method_str = pooling_enum_to_string(vmafSettings->pool_method);
 
     printf("VMAF score (%s) = %f\n", pool_method_str.c_str(), aggregate_vmaf);
     if (aggregate_bagging)
@@ -1256,7 +1256,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         printf("MS-SSIM score (%s) = %f\n", pool_method_str.c_str(), aggregate_ms_ssim);
 
     // print out additional models (if any)
-    if (vmafContext->additional_model_paths != NULL) {
+    if (vmafSettings->additional_model_paths != NULL) {
         int num_additional_models = additional_model_structs.size();
         for (int additional_model_ind = 0; additional_model_ind < num_additional_models; additional_model_ind++)
         {
@@ -1290,17 +1290,17 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         }
     }
 
-    if (vmafContext->log_path != NULL && vmafContext->log_fmt != NULL && (vmafContext->log_fmt == VMAF_LOG_FMT_JSON))
+    if (vmafSettings->log_path != NULL && vmafSettings->log_fmt != NULL && (vmafSettings->log_fmt == VMAF_LOG_FMT_JSON))
     {
         /* output to json */
 
         double value;
 
         OTab params;
-        params["model"] = _get_file_name(std::string(vmafContext->model_path));
-        params["scaledWidth"] = vmafContext->width;
-        params["scaledHeight"] = vmafContext->height;
-        params["subsample"] = vmafContext->n_subsample;
+        params["model"] = _get_file_name(std::string(vmafSettings->model_path));
+        params["scaledWidth"] = vmafSettings->width;
+        params["scaledHeight"] = vmafSettings->height;
+        params["subsample"] = vmafSettings->n_subsample;
         params["num_bootstrap_models"] = num_bootstrap_models;
         params["bootstrap_model_list_str"] = bootstrap_model_list_str;
 
@@ -1314,7 +1314,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         for (size_t i_subsampled=0; i_subsampled<num_frames_subsampled; i_subsampled++)
         {
             OTab frame;
-            frame["frameNum"] = i_subsampled * vmafContext->n_subsample;
+            frame["frameNum"] = i_subsampled * vmafSettings->n_subsample;
             OTab metrics_scores;
             for (size_t j=0; j<result_keys.size(); j++)
             {
@@ -1341,14 +1341,14 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         if (aggregate_ms_ssim)
             top["MS-SSIM score"] = aggregate_ms_ssim;
 
-        std::ofstream log_file(vmafContext->log_path);
+        std::ofstream log_file(vmafSettings->log_path);
         JSONPrint(top, log_file, 0, true, 2);
         log_file.close();
     }
-	else if (vmafContext->log_path != NULL && vmafContext->log_fmt != NULL && (vmafContext->log_fmt == VMAF_LOG_FMT_CSV))
+	else if (vmafSettings->log_path != NULL && vmafSettings->log_fmt != NULL && (vmafSettings->log_fmt == VMAF_LOG_FMT_CSV))
 	{
 		/* output to csv */
-		FILE *csv = fopen(vmafContext->log_path, "wt");
+		FILE *csv = fopen(vmafSettings->log_path, "wt");
 		fprintf(csv, "Frame,Width,Height,");
 		for (size_t j = 0; j < result_keys.size(); j++)
 		{
@@ -1357,8 +1357,8 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
 		fprintf(csv, "\n");
 		for (size_t i_subsampled = 0; i_subsampled<num_frames_subsampled; i_subsampled++)
 		{
-			int frameNum = i_subsampled * vmafContext->n_subsample;
-			fprintf(csv, "%d,%d,%d,", frameNum, vmafContext->width, vmafContext->height);
+			int frameNum = i_subsampled * vmafSettings->n_subsample;
+			fprintf(csv, "%d,%d,%d,", frameNum, vmafSettings->width, vmafSettings->height);
 			for (size_t j = 0; j<result_keys.size(); j++)
 			{
 				fprintf(csv, "%4.4f,", (float)result.get_scores(result_keys[j].c_str()).at(i_subsampled));
@@ -1367,7 +1367,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
 		}
 		fclose(csv);
 	}
-    else if ((vmafContext->log_path != NULL) || (vmafContext->log_fmt == VMAF_LOG_FMT_XML))
+    else if ((vmafSettings->log_path != NULL) || (vmafSettings->log_fmt == VMAF_LOG_FMT_XML))
     {
         /* output to xml */
 
@@ -1376,10 +1376,10 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         xml_root.append_attribute("version") = VMAFOSS_DOC_VERSION;
 
         auto params_node = xml_root.append_child("params");
-        params_node.append_attribute("model") = _get_file_name(std::string(vmafContext->model_path)).c_str();
-        params_node.append_attribute("scaledWidth") = vmafContext->width;
-        params_node.append_attribute("scaledHeight") = vmafContext->height;
-        params_node.append_attribute("subsample") = vmafContext->n_subsample;
+        params_node.append_attribute("model") = _get_file_name(std::string(vmafSettings->model_path)).c_str();
+        params_node.append_attribute("scaledWidth") = vmafSettings->width;
+        params_node.append_attribute("scaledHeight") = vmafSettings->height;
+        params_node.append_attribute("subsample") = vmafSettings->n_subsample;
         params_node.append_attribute("num_bootstrap_models") = num_bootstrap_models;
         params_node.append_attribute("bootstrap_model_list_str") = bootstrap_model_list_str.c_str();
 
@@ -1400,8 +1400,8 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
             info_node.append_attribute("aggregateSSIM") = aggregate_ssim;
         if (aggregate_ms_ssim)
             info_node.append_attribute("aggregateMS_SSIM") = aggregate_ms_ssim;
-        if (vmafContext->pool_method)
-            info_node.append_attribute("poolMethod") = vmafContext->pool_method;
+        if (vmafSettings->pool_method)
+            info_node.append_attribute("poolMethod") = vmafSettings->pool_method;
         info_node.append_attribute("execFps") = exec_fps;
 #if TIME_TEST_ENABLE
 		info_node.append_attribute("timeTaken") = time_taken;
@@ -1411,14 +1411,14 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         for (size_t i_subsampled=0; i_subsampled<num_frames_subsampled; i_subsampled++)
         {
             auto node = frames_node.append_child("frame");
-            node.append_attribute("frameNum") = (int)i_subsampled * vmafContext->n_subsample;
+            node.append_attribute("frameNum") = (int)i_subsampled * vmafSettings->n_subsample;
             for (size_t j=0; j<result_keys.size(); j++)
             {
                 node.append_attribute(result_keys[j].c_str()) = result.get_scores(result_keys[j].c_str()).at(i_subsampled);
             }
         }
 
-        xml.save_file(vmafContext->log_path);
+        xml.save_file(vmafSettings->log_path);
     }
 
     return aggregate_vmaf;

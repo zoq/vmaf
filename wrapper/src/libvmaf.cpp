@@ -243,18 +243,18 @@ extern "C" {
     int compute_vmaf(double* vmaf_score,
         int(*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride_byte, void *user_data),
         int(*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),
-        void *user_data, VmafContext *vmafContext)
+        void *user_data, VmafSettings *vmafSettings)
     {
 
         cpu = cpu_autodetect();
 
-        if (vmafContext->disable_avx)
+        if (vmafSettings->disable_avx)
         {
             cpu = VMAF_CPU_NONE;
         }
 
         try {
-            double score = RunVmaf(read_frame, read_vmaf_picture, user_data, vmafContext);
+            double score = RunVmaf(read_frame, read_vmaf_picture, user_data, vmafSettings);
             *vmaf_score = score;
             return 0;
         }

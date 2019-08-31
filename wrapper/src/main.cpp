@@ -192,36 +192,36 @@ int run_wrapper(enum VmafPixelFormat pix_fmt, int width, int height, char *ref_p
     }
 
     // initialize context
-    VmafContext *vmafContext;
-    vmafContext = (VmafContext *)malloc(sizeof(VmafContext));
+    VmafSettings *vmafSettings;
+    vmafSettings = (VmafSettings *)malloc(sizeof(VmafSettings));
 
     // fill context with data
-    vmafContext->pix_fmt = pix_fmt;
+    vmafSettings->pix_fmt = pix_fmt;
 
-    vmafContext->width = width;
-    vmafContext->height = height;
+    vmafSettings->width = width;
+    vmafSettings->height = height;
 
-    vmafContext->log_path = log_path;
+    vmafSettings->log_path = log_path;
 
-    vmafContext->model_path = model_path;
-    vmafContext->additional_model_paths = additional_model_paths;
-    vmafContext->disable_clip = disable_clip;
-    vmafContext->disable_avx = disable_avx;
-    vmafContext->enable_transform = enable_transform;
-    vmafContext->enable_conf_interval = enable_conf_interval;
+    vmafSettings->model_path = model_path;
+    vmafSettings->additional_model_paths = additional_model_paths;
+    vmafSettings->disable_clip = disable_clip;
+    vmafSettings->disable_avx = disable_avx;
+    vmafSettings->enable_transform = enable_transform;
+    vmafSettings->enable_conf_interval = enable_conf_interval;
 
-    vmafContext->log_fmt = log_fmt;
-    vmafContext->vmaf_feature_setting = vmaf_feature_setting;
-    vmafContext->pool_method = pool_method;
+    vmafSettings->log_fmt = log_fmt;
+    vmafSettings->vmaf_feature_setting = vmaf_feature_setting;
+    vmafSettings->pool_method = pool_method;
 
-    vmafContext->n_thread = n_thread;
-    vmafContext->n_subsample = n_subsample;
+    vmafSettings->n_thread = n_thread;
+    vmafSettings->n_subsample = n_subsample;
 
     /* Run VMAF */
-    ret = compute_vmaf(&score, read_frame, read_vmaf_picture, s, vmafContext);
+    ret = compute_vmaf(&score, read_frame, read_vmaf_picture, s, vmafSettings);
 
     // free VMAF context
-    free(vmafContext);
+    free(vmafSettings);
 
 fail_or_end:
     if (s->ref_rfile)
