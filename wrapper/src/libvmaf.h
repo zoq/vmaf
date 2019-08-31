@@ -43,9 +43,9 @@ enum VmafLogFmt {
 };
 
 enum VmafPoolingMethod {
-    VMAF_POOL_MIN              = (1 << 0),
-    VMAF_POOL_MEAN             = (1 << 1),
-    VMAF_POOL_HARMONIC_MEAN    = (1 << 2),
+    VMAF_POOL_MIN                      = (1 << 0),
+    VMAF_POOL_MEAN                     = (1 << 1),
+    VMAF_POOL_HARMONIC_MEAN            = (1 << 2),
 };
 
 enum VmafFeatureSetting {
@@ -57,13 +57,13 @@ enum VmafFeatureSetting {
 };
 
 enum VmafPixelFormat {
-    VMAF_PIX_FMT_YUV420P         = 0,
-    VMAF_PIX_FMT_YUV422P         = 1,
-    VMAF_PIX_FMT_YUV444P         = 2,
-    VMAF_PIX_FMT_YUV420P10LE     = 3,
-    VMAF_PIX_FMT_YUV422P10LE     = 4,
-    VMAF_PIX_FMT_YUV444P10LE     = 5,
-    VMAF_PIX_FMT_UNKNOWN         = 6,
+    VMAF_PIX_FMT_YUV420P               = 0,
+    VMAF_PIX_FMT_YUV422P               = 1,
+    VMAF_PIX_FMT_YUV444P               = 2,
+    VMAF_PIX_FMT_YUV420P10LE           = 3,
+    VMAF_PIX_FMT_YUV422P10LE           = 4,
+    VMAF_PIX_FMT_YUV444P10LE           = 5,
+    VMAF_PIX_FMT_UNKNOWN               = 6,
 };
 
 typedef struct VmafPicture
@@ -71,6 +71,7 @@ typedef struct VmafPicture
     float *data_y;
     float *data_u;
     float *data_v;
+//    unsigned int w, h;
 //    VmafPixelFormat pix_fmt;
 } VmafPicture;
 
@@ -88,8 +89,8 @@ typedef struct {
     int n_thread;
     int n_subsample;
 
-    int width;
-    int height;
+    unsigned int width;
+    unsigned int height;
 
     unsigned int num_models;
 

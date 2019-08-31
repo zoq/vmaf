@@ -68,19 +68,6 @@ enum VmafPredictionReturnType
     MINUS_DELTA
 };
 
-class Asset
-{
-public:
-    Asset(int w, int h, enum VmafPixelFormat fmt);
-    Asset(int w, int h);
-    int getWidth();
-    int getHeight();
-    enum VmafPixelFormat getFmt();
-private:
-    const int w, h;
-    enum VmafPixelFormat fmt;
-};
-
 enum ScoreAggregateMethod
 {
     MEAN,
@@ -131,15 +118,6 @@ struct VmafPredictionStruct
 {
     std::map<VmafPredictionReturnType, double> vmafPrediction;
     std::vector<double> vmafMultiModelPrediction;
-};
-
-struct AdditionalModelStruct
-{
-    bool enable_transform;
-    bool enable_conf_interval;
-    bool disable_clip;
-    string model_name;
-    string model_path;
 };
 
 class IVmafQualityRunner {
@@ -199,7 +177,7 @@ class VmafQualityRunner : public IVmafQualityRunner
 {
 public:
     VmafQualityRunner(const char *model_path): model_path(model_path) {}
-    static void feature_extract(Result &result, Asset asset,
+    static void feature_extract(Result &result,
                 int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
                 int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),
                 void *user_data, VmafSettings *vmafSettings);

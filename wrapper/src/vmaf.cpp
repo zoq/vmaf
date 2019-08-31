@@ -609,86 +609,17 @@ void _replace_string_in_place(std::string& subject, const std::string& search,
     }
 }
 
-
-std::vector<AdditionalModelStruct> _get_additional_model_structs(char *model_paths)
-{
-    AdditionalModelStruct additional_model_struct;
-    std::vector<AdditionalModelStruct> additional_model_structs;
-
-    // read additional models, if any
-    if (model_paths != NULL) {
-
-        std::string unknown_option_exception;
-        std::string model_key, model_values;
-        bool use_option;
-
-        istringstream is(model_paths);
-        Val additional_model_path_val;
-        Val inner_additional_model_path_val;
-
-        ReadValFromJSONStream(is, additional_model_path_val);
-
-        for (TableIterator kv_pair(additional_model_path_val); kv_pair(); ) {
-
-            // each model corresponds to a key-value pair
-            // the value corresponds to a dictionary as well that we parse
-
-            additional_model_struct.model_name = GetString(kv_pair.key());
-
-            // set defaults
-            additional_model_struct.enable_transform = false;
-            additional_model_struct.enable_conf_interval = false;
-            additional_model_struct.disable_clip = false;
-            additional_model_struct.model_path = ""; // should be filled up correctly below
-
-            model_values = GetString(kv_pair.value());
-
-            // replace single quotes with double quotes and extra spaces added by parser
-            _replace_string_in_place(model_values, "'", "\"");
-            _replace_string_in_place(model_values, " ", "");
-
-            istringstream inner_is(model_values.c_str());
-            ReadValFromJSONStream(inner_is, inner_additional_model_path_val);
-
-            for (TableIterator inner_kv_pair(inner_additional_model_path_val); inner_kv_pair(); ) {
-
-                use_option = GetString(inner_kv_pair.value()) == "1";
-
-                if (GetString(inner_kv_pair.key()) == "model_path") {
-                    additional_model_struct.model_path = GetString(inner_kv_pair.value());
-                }
-                else if (GetString(inner_kv_pair.key()) == "enable_transform") {
-                    additional_model_struct.enable_transform = use_option;
-                }
-                else if (GetString(inner_kv_pair.key()) == "enable_conf_interval"){
-                    additional_model_struct.enable_conf_interval = use_option;
-                }
-                else if (GetString(inner_kv_pair.key()) == "disable_clip") {
-                    additional_model_struct.disable_clip = use_option;
-                }
-                else {
-                    unknown_option_exception = "Additional model option " + GetString(inner_kv_pair.key()) + " is unknown.";
-                    throw VmafException(unknown_option_exception.c_str());
-                }
-            }
-
-            // add model struct to vector of model structs
-            additional_model_structs.push_back(additional_model_struct);
-        }
-
-    }
-    return additional_model_structs;
-}
-
-void VmafQualityRunner::feature_extract(Result &result, Asset asset,
+void VmafQualityRunner::feature_extract(Result &result,
                         int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
                         int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),
                         void *user_data, VmafSettings *vmafSettings)
 {
     dbg_printf("Initialize storage arrays...\n");
-    int w = asset.getWidth();
-    int h = asset.getHeight();
-    enum VmafPixelFormat fmt = asset.getFmt();
+
+    unsigned int w = vmafSettings->width;
+    unsigned int h = vmafSettings->height;
+    enum VmafPixelFormat fmt = vmafSettings->pix_fmt;
+
     char errmsg[1024];
     DArray adm_num_array, adm_den_array, adm_num_scale0_array,
             adm_den_scale0_array, adm_num_scale1_array, adm_den_scale1_array,
@@ -1136,14 +1067,12 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         throw VmafException("Invalid n_subsample value (must be > 0)");
     }
 
-    Asset asset(vmafSettings->width, vmafSettings->height, vmafSettings->pix_fmt);
-
     Timer timer;
     timer.start();
     Result result;
 
     // feature extraction
-    VmafQualityRunner::feature_extract(result, asset, read_frame, read_vmaf_picture, user_data, vmafSettings);
+    VmafQualityRunner::feature_extract(result, read_frame, read_vmaf_picture, user_data, vmafSettings);
 
     unsigned int num_models = vmafSettings->num_models;
     for (int i = 0; i < num_models; i ++)
