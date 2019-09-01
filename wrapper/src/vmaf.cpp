@@ -600,15 +600,6 @@ void VmafQualityRunner::_set_prediction_result(
     result.set_scores(model_name, score);
 }
 
-void _replace_string_in_place(std::string& subject, const std::string& search,
-                          const std::string& replace) {
-    size_t pos = 0;
-    while ((pos = subject.find(search, pos)) != std::string::npos) {
-         subject.replace(pos, search.length(), replace);
-         pos += replace.length();
-    }
-}
-
 void VmafQualityRunner::feature_extract(Result &result,
                         int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
                         int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),

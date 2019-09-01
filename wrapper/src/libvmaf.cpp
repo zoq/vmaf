@@ -223,7 +223,7 @@ extern "C" {
 
         cpu = cpu_autodetect();
 
-        if (vmafSettings->disable_avx)
+        if (vmafSettings->vmaf_feature_calculation_setting.disable_avx)
         {
             cpu = VMAF_CPU_NONE;
         }

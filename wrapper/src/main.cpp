@@ -110,7 +110,7 @@ void getMemory(int itr_ctr, int state)
 }
 #endif
 
-void _replace_string_in_place2(std::string& subject, const std::string& search,
+void _replace_string_in_place(std::string& subject, const std::string& search,
                           const std::string& replace) {
     size_t pos = 0;
     while ((pos = subject.find(search, pos)) != std::string::npos) {
@@ -160,8 +160,8 @@ unsigned int _get_additional_models(char *model_paths, VmafModel *vmaf_model)
             model_values = GetString(kv_pair.value());
 
             // replace single quotes with double quotes and extra spaces added by parser
-            _replace_string_in_place2(model_values, "'", "\"");
-            _replace_string_in_place2(model_values, " ", "");
+            _replace_string_in_place(model_values, "'", "\"");
+            _replace_string_in_place(model_values, " ", "");
 
             istringstream inner_is(model_values.c_str());
             ReadValFromJSONStream(inner_is, inner_additional_model_path_val);
@@ -331,6 +331,7 @@ int run_wrapper(enum VmafPixelFormat pix_fmt, int width, int height, char *ref_p
     vmafSettings->vmaf_feature_calculation_setting.n_threads = n_thread;
     vmafSettings->vmaf_feature_calculation_setting.disable_avx = disable_avx;
 
+    // set the first model as the default VMAF model (there can be MAX_NUM_VMAF_MODELS - 1 additional models at most)
     vmafSettings->default_model_ind = 0;
 
     vmafSettings->vmaf_model[0].name = "vmaf";
@@ -389,7 +390,7 @@ int main(int argc, char *argv[])
     enum VmafPoolingMethod pool_method = VMAF_POOL_MEAN;
 
     unsigned int n_thread = 0;
-    unsignedint n_subsample = 1;
+    unsigned int n_subsample = 1;
 
     char *temp;
 #if MEM_LEAK_TEST_ENABLE	
@@ -553,22 +554,22 @@ int main(int argc, char *argv[])
 
     if (cmdOptionExists(argv + 7, argv + argc, "--psnr"))
     {
-        vmaf_feature_setting |= VMAF_FEATURE_MODE_SETTING_DO_PSNR;
+        vmaf_feature_mode_setting |= VMAF_FEATURE_MODE_SETTING_DO_PSNR;
     }
 
     if (cmdOptionExists(argv + 7, argv + argc, "--ssim"))
     {
-        vmaf_feature_setting |= VMAF_FEATURE_MODE_SETTING_DO_SSIM;
+        vmaf_feature_mode_setting |= VMAF_FEATURE_MODE_SETTING_DO_SSIM;
     }
 
     if (cmdOptionExists(argv + 7, argv + argc, "--ms-ssim"))
     {
-        vmaf_feature_setting |= VMAF_FEATURE_MODE_SETTING_DO_MS_SSIM;
+        vmaf_feature_mode_setting |= VMAF_FEATURE_MODE_SETTING_DO_MS_SSIM;
     }
 
     if (cmdOptionExists(argv + 7, argv + argc, "--color"))
     {
-        vmaf_feature_setting |= VMAF_FEATURE_SETTING_DO_COLOR;
+        vmaf_feature_mode_setting |= VMAF_FEATURE_MODE_SETTING_DO_COLOR;
     }
 
     char *pool_method_option = getCmdOption(argv + 7, argv + argc, "--pool");
@@ -594,13 +595,13 @@ int main(int argc, char *argv[])
 		{
 			getMemory(itr_ctr, 1);
 			ret = run_wrapper(pix_fmt, width, height, ref_path, dis_path,
-                log_path, log_fmt, disable_avx, vmaf_feature_setting, pool_method, n_thread,
+                log_path, log_fmt, disable_avx, vmaf_feature_mode_setting, pool_method, n_thread,
                 n_subsample, model_path, additional_model_paths, disable_clip, enable_conf_interval, enable_transform);
 			getMemory(itr_ctr, 2);
 		}
 #else
         return run_wrapper(pix_fmt, width, height, ref_path, dis_path,
-                log_path, log_fmt, disable_avx, vmaf_feature_setting, pool_method, n_thread,
+                log_path, log_fmt, disable_avx, vmaf_feature_mode_setting, pool_method, n_thread,
                 n_subsample, model_path, additional_model_paths, disable_clip, enable_conf_interval, enable_transform);
 #endif
     }

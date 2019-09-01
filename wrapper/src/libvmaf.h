@@ -78,7 +78,10 @@ typedef struct VmafPicture
     float *data_y;
     float *data_u;
     float *data_v;
-//    unsigned int w, h;
+    int w, h;
+    int stride_byte;
+//    unsigned int w[0], h[0];
+//    unsigned int stride_byte[0];
 //    VmafPixelFormat pix_fmt;
 } VmafPicture;
 

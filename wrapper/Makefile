@@ -70,7 +70,7 @@ $(OBJDIR)/alignment.o: $(FEATURESRCDIR)/common/alignment.c
 	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) $<
 
 $(OBJDIR)/file_io.o: $(FEATURESRCDIR)/common/file_io.c
-	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) $<
+	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) -I $(LIBVMAF_HEADER) $<
 
 $(OBJDIR)/frame.o: $(FEATURESRCDIR)/common/frame.c
 	$(CC) -c -o $@ $(CFLAGS) $(CPPFLAGS) -I $(LIBVMAF_HEADER) $<

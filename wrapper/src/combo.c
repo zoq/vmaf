@@ -191,7 +191,16 @@ void* combo_threadfunc(void* vmaf_thread_data)
             }
 
             ref_vmaf_pict->data_y = ref_buf;
+            ref_vmaf_pict->w = w;
+            ref_vmaf_pict->h = h;
+            ref_vmaf_pict->stride_byte = get_stride_byte_from_width(ref_vmaf_pict->w);
+
             dis_vmaf_pict->data_y = dis_buf;
+            dis_vmaf_pict->w = w;
+            dis_vmaf_pict->h = h;
+            dis_vmaf_pict->stride_byte = get_stride_byte_from_width(dis_vmaf_pict->w);
+
+//            fprintf("Address of ref_buf is %p\n", (void *) &ref_buf);
 
             if (use_color)
             {
@@ -212,6 +221,13 @@ void* combo_threadfunc(void* vmaf_thread_data)
 #endif
                 goto fail_or_end;
             }
+
+            // ===============================================================
+            // offset pixel by OPT_RANGE_PIXEL_OFFSET (no offset for color for now)
+            // ===============================================================
+
+//            offset_vmaf_picture(ref_vmaf_pict, OPT_RANGE_PIXEL_OFFSET);
+//            offset_vmaf_picture(dis_vmaf_pict, OPT_RANGE_PIXEL_OFFSET);
 
             ref_buf = ref_vmaf_pict->data_y;
             dis_buf = dis_vmaf_pict->data_y;
