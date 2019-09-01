@@ -73,7 +73,7 @@ void* combo_threadfunc(void* vmaf_thread_data)
     int h = thread_data->h;
     char* errmsg = thread_data->errmsg;
     void* user_data = thread_data->user_data;
-    const char* fmt = thread_data->fmt;
+    enum VmafPixelFormat fmt = thread_data->fmt;
     int n_subsample = thread_data->n_subsample;
     bool use_color = thread_data->use_color;
 

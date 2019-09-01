@@ -19,6 +19,8 @@
 #ifndef LIBVMAF_H_
 #define LIBVMAF_H_
 
+#define MAX_NUM_VMAF_MODELS 5 // there can be MAX_NUM_VMAF_MODELS - 1 additional models at most
+
 #ifndef WINCE
 #define TIME_TEST_ENABLE 		1 // 1: memory leak test enable 0: disable
 #define MEM_LEAK_TEST_ENABLE 	0 // prints execution time in xml log when enabled.
@@ -33,8 +35,6 @@ extern "C" {
 #endif
 
 #include <stdbool.h>
-
-static const unsigned int MAX_NUM_VMAF_MODELS = 5;
 
 enum VmafLogFmt {
     VMAF_LOG_FMT_XML  = (1 << 0),

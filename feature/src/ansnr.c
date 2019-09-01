@@ -142,7 +142,9 @@ int ansnr(int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
         goto fail_or_end;
     }
 
-    ret = psnr_constants(fmt, &peak, &psnr_max);
+    enum VmafPixelFormat fmt_enum = get_pix_fmt_from_input_char_ptr(fmt);
+
+    ret = psnr_constants(fmt_enum, &peak, &psnr_max);
     if (ret)
     {
         printf("error: unknown format %s.\n", fmt);

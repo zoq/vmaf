@@ -55,11 +55,12 @@ bool cmdOptionExists(char** begin, char** end, const std::string& option)
 
 void print_usage(int argc, char *argv[])
 {
-    fprintf(stderr, "Usage: %s fmt width height ref_path dis_path model_path [--log log_path] [--log-fmt log_fmt] [--thread n_thread] [--subsample n_subsample] [--disable-clip] [--disable-avx] [--psnr] [--ssim] [--ms-ssim] [--phone-model] [--ci]\n", argv[0]);
+    fprintf(stderr, "Usage: %s fmt width height ref_path dis_path model_path [--log log_path] [--log-fmt log_fmt] [--thread n_thread] [--subsample n_subsample] [--disable-clip] [--disable-avx] [--psnr] [--ssim] [--ms-ssim] [--phone-model] [--ci] [--color] [--additional-models additional_models]\n", argv[0]);
     fprintf(stderr, "fmt:\n\tyuv420p\n\tyuv422p\n\tyuv444p\n\tyuv420p10le\n\tyuv422p10le\n\tyuv444p10le\n\n");
     fprintf(stderr, "log_fmt:\n\txml (default)\n\tjson\n\tcsv\n\n");
     fprintf(stderr, "n_thread:\n\tmaximum threads to use (default 0 - use all threads)\n\n");
     fprintf(stderr, "n_subsample:\n\tn indicates computing on one of every n frames (default 1)\n\n");
+    fprintf(stderr, "additional_models:\n\tadditional models as an escaped json string, e.g. {\\\"VMAF2\\\"\\\:{\\\"model_path\\\"\\\:\\\"model/vmaf_v0.6.1.pkl\\\"\\\,\\\"enable_transform\\\"\\\:\\\"0\\\"}\\\,\\\"VMAF3\\\"\\\:{\\\"model_path\\\"\\\:\\\"model/vmaf_v0.6.1.pkl\\\"\\\,\\\"enable_transform\\\"\\\:\\\"1\\\"\}}");
 }
 
 #if MEM_LEAK_TEST_ENABLE
@@ -331,7 +332,7 @@ int run_wrapper(enum VmafPixelFormat pix_fmt, int width, int height, char *ref_p
     vmafSettings->vmaf_feature_calculation_setting.n_threads = n_thread;
     vmafSettings->vmaf_feature_calculation_setting.disable_avx = disable_avx;
 
-    // set the first model as the default VMAF model (there can be MAX_NUM_VMAF_MODELS - 1 additional models at most)
+    // set the first model as the default VMAF model
     vmafSettings->default_model_ind = 0;
 
     vmafSettings->vmaf_model[0].name = "vmaf";

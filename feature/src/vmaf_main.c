@@ -23,12 +23,12 @@
 #include "common/frame.h"
 #include "common/cpu.h"
 
-int adm(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data), void *user_data, int w, int h, const char *fmt);
-int ansnr(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data), void *user_data, int w, int h, const char *fmt);
-int vif(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data), void *user_data, int w, int h, const char *fmt);
-int vifdiff(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data), void *user_data, int w, int h, const char *fmt);
-int motion(int (*read_noref_frame)(float *main_data, float *temp_data, int stride, void *user_data), void *user_data, int w, int h, const char *fmt);
-int all(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data), void *user_data, int w, int h, const char *fmt);
+int adm(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data), void *user_data, int w, int h, enum VmafPixelFormat fmt);
+int ansnr(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data), void *user_data, int w, int h, enum VmafPixelFormat fmt);
+int vif(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data), void *user_data, int w, int h, enum VmafPixelFormat fmt);
+int vifdiff(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data), void *user_data, int w, int h, enum VmafPixelFormat fmt);
+int motion(int (*read_noref_frame)(float *main_data, float *temp_data, int stride, void *user_data), void *user_data, int w, int h, enum VmafPixelFormat fmt);
+int all(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data), void *user_data, int w, int h, enum VmafPixelFormat fmt);
 
 enum vmaf_cpu cpu; // global
 
@@ -52,7 +52,7 @@ static void usage(void)
     );
 }
 
-int run_vmaf(const char *app, const char *fmt, const char *ref_path, const char *dis_path, int w, int h)
+int run_vmaf(const char *app, enum VmafPixelFormat fmt, const char *ref_path, const char *dis_path, int w, int h)
 {
     int ret = 0;
     cpu = cpu_autodetect();
@@ -167,7 +167,7 @@ int main(int argc, const char **argv)
     }
 
     app      = argv[1];
-    fmt         = argv[2];
+    fmt      = argv[2];
     ref_path = argv[3];
     dis_path = argv[4];
     w        = atoi(argv[5]);
@@ -178,5 +178,7 @@ int main(int argc, const char **argv)
         return 2;
     }
 
-    return run_vmaf(app, fmt, ref_path, dis_path, w, h);
+    enum VmafPixelFormat fmt_enum = get_pix_fmt_from_input_char_ptr(fmt);
+
+    return run_vmaf(app, fmt_enum, ref_path, dis_path, w, h);
 }

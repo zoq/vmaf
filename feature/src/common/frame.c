@@ -499,3 +499,38 @@ int get_color_resolution(enum VmafPixelFormat fmt, int w, int h, size_t *w_u, si
 int get_stride_byte_from_width(int w) {
     return ALIGN_CEIL(w * sizeof(float));
 }
+
+enum VmafPixelFormat get_pix_fmt_from_input_char_ptr(const char *pix_fmt_option)
+{
+    enum VmafPixelFormat pix_fmt;
+    if (!strcmp(pix_fmt_option, "yuv420p"))
+    {
+        pix_fmt = VMAF_PIX_FMT_YUV420P;
+    }
+    else if (!strcmp(pix_fmt_option, "yuv422p"))
+    {
+        pix_fmt = VMAF_PIX_FMT_YUV422P;
+    }
+    else if (!strcmp(pix_fmt_option, "yuv444p"))
+    {
+        pix_fmt = VMAF_PIX_FMT_YUV444P;
+    }
+    else if (!strcmp(pix_fmt_option, "yuv420p10le"))
+    {
+        pix_fmt = VMAF_PIX_FMT_YUV420P10LE;
+    }
+    else if (!strcmp(pix_fmt_option, "yuv422p10le"))
+    {
+        pix_fmt = VMAF_PIX_FMT_YUV422P10LE;
+    }
+    else if (!strcmp(pix_fmt_option, "yuv444p10le"))
+    {
+        pix_fmt = VMAF_PIX_FMT_YUV444P10LE;
+    }
+    else
+    {
+        fprintf(stderr, "Unknown format %s.\n", pix_fmt_option);
+        pix_fmt = VMAF_PIX_FMT_UNKNOWN;
+    }
+    return pix_fmt;
+}

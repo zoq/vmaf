@@ -55,4 +55,6 @@ int get_color_resolution(enum VmafPixelFormat fmt, int w, int h, size_t *w_u, si
 
 int get_stride_byte_from_width(int w);
 
+enum VmafPixelFormat get_pix_fmt_from_input_char_ptr(const char *pix_fmt_option);
+
 #endif /* FRAME_H_ */

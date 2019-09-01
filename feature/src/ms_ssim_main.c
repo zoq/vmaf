@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include "common/frame.h"
 
-int ms_ssim(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data), void *user_data, int w, int h, const char *fmt);
+int ms_ssim(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data), void *user_data, int w, int h, enum VmafPixelFormat fmt);
 
 static void usage(void)
 {
@@ -35,7 +35,7 @@ static void usage(void)
     );
 }
 
-int run_ms_ssim(const char *fmt, const char *ref_path, const char *dis_path, int w, int h)
+int run_ms_ssim(enum VmafPixelFormat fmt, const char *ref_path, const char *dis_path, int w, int h)
 {
     int ret = 0;
     struct data *s;
@@ -94,7 +94,7 @@ int main(int argc, const char **argv)
         return 2;
     }
 
-    fmt         = argv[1];
+    fmt      = argv[1];
     ref_path = argv[2];
     dis_path = argv[3];
     w        = atoi(argv[4]);
@@ -105,5 +105,7 @@ int main(int argc, const char **argv)
         return 2;
     }
 
-    return run_ms_ssim(fmt, ref_path, dis_path, w, h);
+    enum VmafPixelFormat fmt_enum = get_pix_fmt_from_input_char_ptr(fmt);
+
+    return run_ms_ssim(fmt_enum, ref_path, dis_path, w, h);
 }
