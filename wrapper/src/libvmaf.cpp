@@ -21,31 +21,6 @@
 #include <cstdio>
 #include "cpu.h"
 
-Asset::Asset(int w, int h, enum VmafPixelFormat fmt)
-    :w(w), h(h), fmt(fmt) 
-{
-}
-
-Asset::Asset(int w, int h) 
-    :w(w), h(h), fmt(VMAF_PIX_FMT_YUV420P)
-{
-}
-
-int Asset::getWidth()
-{ 
-    return w; 
-}
-
-int Asset::getHeight()
-{ 
-    return h; 
-}
-
-enum VmafPixelFormat Asset::getFmt()
-{ 
-    return fmt; 
-}
-
 StatVector::StatVector() 
 {
 }
@@ -212,7 +187,7 @@ unsigned int Result::get_num_frms()
     return num_frms;
 }
 
-void Result::set_num_frms(int num_frms)
+void Result::set_num_frms(unsigned int num_frms)
 {
     this->num_frms = num_frms;
 }

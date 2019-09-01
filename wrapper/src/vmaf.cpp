@@ -661,25 +661,25 @@ void VmafQualityRunner::feature_extract(Result &result,
     init_array(&ms_ssim_array, INIT_FRAMES);
 
     /* optional output arrays */
-    if (vmafSettings->vmaf_feature_setting & VMAF_FEATURE_SETTING_DO_PSNR) {
+    if (vmafSettings->vmaf_feature_mode_setting & VMAF_FEATURE_MODE_SETTING_DO_PSNR) {
         psnr_array_ptr = &psnr_array;
     } else {
         psnr_array_ptr = NULL;
     }
-    if (vmafSettings->vmaf_feature_setting & VMAF_FEATURE_SETTING_DO_SSIM) {
+    if (vmafSettings->vmaf_feature_mode_setting & VMAF_FEATURE_MODE_SETTING_DO_SSIM) {
         ssim_array_ptr = &ssim_array;
     } else {
         ssim_array_ptr = NULL;
     }
-    if (vmafSettings->vmaf_feature_setting & VMAF_FEATURE_SETTING_DO_MS_SSIM) {
+    if (vmafSettings->vmaf_feature_mode_setting & VMAF_FEATURE_MODE_SETTING_DO_MS_SSIM) {
         ms_ssim_array_ptr = &ms_ssim_array;
     } else {
         ms_ssim_array_ptr = NULL;
     }
 
-    bool use_color = vmafSettings->vmaf_feature_setting & VMAF_FEATURE_SETTING_DO_COLOR;
+    bool use_color = vmafSettings->vmaf_feature_mode_setting & VMAF_FEATURE_MODE_SETTING_DO_COLOR;
 
-    if (vmafSettings->vmaf_feature_setting & VMAF_FEATURE_SETTING_DO_COLOR) {
+    if (vmafSettings->vmaf_feature_mode_setting & VMAF_FEATURE_MODE_SETTING_DO_COLOR) {
         psnr_u_array_ptr = &psnr_u_array;
         psnr_v_array_ptr = &psnr_v_array;
     } else {
@@ -697,7 +697,7 @@ void VmafQualityRunner::feature_extract(Result &result,
             &vif_num_scale2_array, &vif_den_scale2_array, &vif_num_scale3_array,
             &vif_den_scale3_array, &vif_array,
             psnr_array_ptr, psnr_u_array_ptr, psnr_v_array_ptr, ssim_array_ptr,
-            ms_ssim_array_ptr, errmsg, vmafSettings->n_thread, vmafSettings->n_subsample,
+            ms_ssim_array_ptr, errmsg, vmafSettings->vmaf_feature_calculation_setting,
             use_color);
     if (ret) {
         throw VmafException(errmsg);
@@ -761,8 +761,8 @@ void VmafQualityRunner::feature_extract(Result &result,
     StatVector adm_scale0, adm_scale1, adm_scale2, adm_scale3;
     StatVector psnr, psnr_u, psnr_v, ssim, ms_ssim;
 
-    int num_frms_subsampled = 0;
-    for (size_t i = 0; i < num_frms; i += vmafSettings->n_subsample) {
+    unsigned int num_frms_subsampled = 0;
+    for (size_t i = 0; i < num_frms; i += vmafSettings->vmaf_feature_calculation_setting.n_subsample) {
         adm2.append(
                 (get_at(&adm_num_array, i) + ADM2_CONSTANT)
                         / (get_at(&adm_den_array, i) + ADM2_CONSTANT));
@@ -1058,11 +1058,11 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
     {
         throw VmafException("Invalid height value (must be > 0)");
     }
-    if (vmafSettings->n_thread < 0)
+    if (vmafSettings->vmaf_feature_calculation_setting.n_threads < 0)
     {
         throw VmafException("Invalid n_thread value (must be >= 0)");
     }
-    if (vmafSettings->n_subsample <= 0)
+    if (vmafSettings->vmaf_feature_calculation_setting.n_subsample <= 0)
     {
         throw VmafException("Invalid n_subsample value (must be > 0)");
     }
@@ -1108,7 +1108,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
     size_t num_frames_subsampled = result.get_scores(default_model_name).size();
     double aggregate_vmaf = result.get_score(default_model_name);
 
-    double exec_fps = (double)num_frames_subsampled * vmafSettings->n_subsample / (double)timer.elapsed();
+    double exec_fps = (double)num_frames_subsampled * vmafSettings->vmaf_feature_calculation_setting.n_subsample / (double)timer.elapsed();
 #if TIME_TEST_ENABLE
 	double time_taken = (double)timer.elapsed();
 #endif
@@ -1194,7 +1194,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         params["model"] = _get_file_name(std::string(vmafSettings->vmaf_model[default_model_ind].path));
         params["scaledWidth"] = vmafSettings->width;
         params["scaledHeight"] = vmafSettings->height;
-        params["subsample"] = vmafSettings->n_subsample;
+        params["subsample"] = vmafSettings->vmaf_feature_calculation_setting.n_subsample;
         params["num_bootstrap_models"] = num_bootstrap_models;
         params["bootstrap_model_list_str"] = bootstrap_model_list_str;
 
@@ -1208,7 +1208,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         for (size_t i_subsampled=0; i_subsampled<num_frames_subsampled; i_subsampled++)
         {
             OTab frame;
-            frame["frameNum"] = i_subsampled * vmafSettings->n_subsample;
+            frame["frameNum"] = i_subsampled * vmafSettings->vmaf_feature_calculation_setting.n_subsample;
             OTab metrics_scores;
             for (size_t j=0; j<result_keys.size(); j++)
             {
@@ -1251,7 +1251,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
 		fprintf(csv, "\n");
 		for (size_t i_subsampled = 0; i_subsampled<num_frames_subsampled; i_subsampled++)
 		{
-			int frameNum = i_subsampled * vmafSettings->n_subsample;
+			int frameNum = i_subsampled * vmafSettings->vmaf_feature_calculation_setting.n_subsample;
 			fprintf(csv, "%d,%d,%d,", frameNum, vmafSettings->width, vmafSettings->height);
 			for (size_t j = 0; j<result_keys.size(); j++)
 			{
@@ -1273,7 +1273,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         params_node.append_attribute("model") = _get_file_name(std::string(vmafSettings->vmaf_model[default_model_ind].path)).c_str();
         params_node.append_attribute("scaledWidth") = vmafSettings->width;
         params_node.append_attribute("scaledHeight") = vmafSettings->height;
-        params_node.append_attribute("subsample") = vmafSettings->n_subsample;
+        params_node.append_attribute("subsample") = vmafSettings->vmaf_feature_calculation_setting.n_subsample;
         params_node.append_attribute("num_bootstrap_models") = num_bootstrap_models;
         params_node.append_attribute("bootstrap_model_list_str") = bootstrap_model_list_str.c_str();
 
@@ -1305,7 +1305,7 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
         for (size_t i_subsampled=0; i_subsampled<num_frames_subsampled; i_subsampled++)
         {
             auto node = frames_node.append_child("frame");
-            node.append_attribute("frameNum") = (int)i_subsampled * vmafSettings->n_subsample;
+            node.append_attribute("frameNum") = (int)i_subsampled * vmafSettings->vmaf_feature_calculation_setting.n_subsample;
             for (size_t j=0; j<result_keys.size(); j++)
             {
                 node.append_attribute(result_keys[j].c_str()) = result.get_scores(result_keys[j].c_str()).at(i_subsampled);

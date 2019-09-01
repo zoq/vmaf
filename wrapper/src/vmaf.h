@@ -107,7 +107,7 @@ public:
     std::vector<std::string> get_keys();
     void setScoreAggregateMethod(ScoreAggregateMethod scoreAggregateMethod);
     unsigned int get_num_frms();
-    void set_num_frms(int num_frms);
+    void set_num_frms(unsigned int num_frms);
 private:
     std::map<std::string, StatVector> d;
     ScoreAggregateMethod score_aggregate_method;

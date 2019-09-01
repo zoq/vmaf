@@ -806,8 +806,7 @@ int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
         DArray *ssim_array,
         DArray *ms_ssim_array,
         char *errmsg,
-        int n_thread,
-        int n_subsample,
+        VmafFeatureCalculationSetting vmaf_feature_calculation_setting,
         bool use_color
         )
 {
@@ -849,7 +848,7 @@ int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
     combo_thread_data.errmsg = errmsg;
     combo_thread_data.frm_idx = 0;
     combo_thread_data.stop_threads = 0;
-    combo_thread_data.n_subsample = n_subsample;
+    combo_thread_data.n_subsample = vmaf_feature_calculation_setting.n_subsample;
     combo_thread_data.use_color = use_color;
 
     DArray	motion_score_compute_flag_array;
@@ -896,13 +895,13 @@ int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
         combo_thread_data.data_sz_v = (size_t)combo_thread_data.stride_v * h_v;
     }
 
-    if (n_thread == 0)
+    if (vmaf_feature_calculation_setting.n_threads == 0)
     {
         combo_thread_data.thread_count = getNumCores();
     }
     else
     {
-        combo_thread_data.thread_count = MIN(getNumCores(), n_thread);
+        combo_thread_data.thread_count = MIN(getNumCores(), vmaf_feature_calculation_setting.n_threads);
     }
 
     // for motion analysis we compare to previous buffer and next buffer
@@ -1001,8 +1000,7 @@ int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
         DArray *ssim_array,
         DArray *ms_ssim_array,
         char *errmsg,
-        int n_thread,
-        int n_subsample,
+        VmafFeatureCalculationSetting vmaf_feature_calculation_setting,
         bool use_color
         )
 {
@@ -1042,7 +1040,7 @@ int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
     combo_thread_data.errmsg = errmsg;
     combo_thread_data.frm_idx = 0;
     // combo_thread_data.stop_threads = 0;
-    combo_thread_data.n_subsample = n_subsample;
+    combo_thread_data.n_subsample = vmaf_feature_calculation_setting.n_subsample;
     combo_thread_data.use_color = use_color;
 
     // sanity check for width/height

@@ -124,8 +124,7 @@ int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
         DArray *ssim_array,
         DArray *ms_ssim_array,
         char *errmsg,
-        int n_thread,
-        int n_subsample,
+        VmafFeatureCalculationSetting vmaf_feature_calculation_setting,
         bool use_color
 );
 

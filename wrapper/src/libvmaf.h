@@ -43,27 +43,34 @@ enum VmafLogFmt {
 };
 
 enum VmafPoolingMethod {
-    VMAF_POOL_MIN                      = (1 << 0),
-    VMAF_POOL_MEAN                     = (1 << 1),
-    VMAF_POOL_HARMONIC_MEAN            = (1 << 2),
+    VMAF_POOL_MIN                                      = (1 << 0),
+    VMAF_POOL_MEAN                                     = (1 << 1),
+    VMAF_POOL_HARMONIC_MEAN                            = (1 << 2),
 };
 
-enum VmafFeatureSetting {
-    VMAF_FEATURE_SETTING_DO_NONE       = (1 << 0),
-    VMAF_FEATURE_SETTING_DO_PSNR       = (1 << 1),
-    VMAF_FEATURE_SETTING_DO_SSIM       = (1 << 2),
-    VMAF_FEATURE_SETTING_DO_MS_SSIM    = (1 << 3),
-    VMAF_FEATURE_SETTING_DO_COLOR      = (1 << 4),
+typedef struct VmafFeatureCalculationSetting
+{
+    unsigned int n_threads;
+    unsigned int n_subsample;
+    bool disable_avx;
+} VmafFeatureCalculationSetting;
+
+enum VmafFeatureModeSetting {
+    VMAF_FEATURE_MODE_SETTING_DO_NONE                  = (1 << 0),
+    VMAF_FEATURE_MODE_SETTING_DO_PSNR                  = (1 << 1),
+    VMAF_FEATURE_MODE_SETTING_DO_SSIM                  = (1 << 2),
+    VMAF_FEATURE_MODE_SETTING_DO_MS_SSIM               = (1 << 3),
+    VMAF_FEATURE_MODE_SETTING_DO_COLOR                 = (1 << 4),
 };
 
 enum VmafPixelFormat {
-    VMAF_PIX_FMT_YUV420P               = 0,
-    VMAF_PIX_FMT_YUV422P               = 1,
-    VMAF_PIX_FMT_YUV444P               = 2,
-    VMAF_PIX_FMT_YUV420P10LE           = 3,
-    VMAF_PIX_FMT_YUV422P10LE           = 4,
-    VMAF_PIX_FMT_YUV444P10LE           = 5,
-    VMAF_PIX_FMT_UNKNOWN               = 6,
+    VMAF_PIX_FMT_YUV420P                               = 0,
+    VMAF_PIX_FMT_YUV422P                               = 1,
+    VMAF_PIX_FMT_YUV444P                               = 2,
+    VMAF_PIX_FMT_YUV420P10LE                           = 3,
+    VMAF_PIX_FMT_YUV422P10LE                           = 4,
+    VMAF_PIX_FMT_YUV444P10LE                           = 5,
+    VMAF_PIX_FMT_UNKNOWN                               = 6,
 };
 
 typedef struct VmafPicture
@@ -85,21 +92,16 @@ typedef struct {
 
 typedef struct {
 
-    int disable_avx;
-    int n_thread;
-    int n_subsample;
-
     unsigned int width;
     unsigned int height;
-
     unsigned int num_models;
-
-    VmafModel vmaf_model[MAX_NUM_VMAF_MODELS];
+    unsigned int default_model_ind; // useful to tell between the default model and additional models (if any)
 
     char *log_path;
+    int vmaf_feature_mode_setting;
 
-    int vmaf_feature_setting;
-    unsigned int default_model_ind;
+    VmafModel vmaf_model[MAX_NUM_VMAF_MODELS];
+    VmafFeatureCalculationSetting vmaf_feature_calculation_setting;
 
     enum VmafPixelFormat pix_fmt;
     enum VmafLogFmt log_fmt;

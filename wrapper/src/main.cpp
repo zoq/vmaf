@@ -227,7 +227,8 @@ unsigned int _get_additional_models(char *model_paths, VmafModel *vmaf_model)
 }
 
 int run_wrapper(enum VmafPixelFormat pix_fmt, int width, int height, char *ref_path, char *dis_path,
-        char *log_path, enum VmafLogFmt log_fmt, bool disable_avx, int vmaf_feature_setting, enum VmafPoolingMethod pool_method,
+        char *log_path, enum VmafLogFmt log_fmt, bool disable_avx, int vmaf_feature_mode_setting,
+        enum VmafPoolingMethod pool_method,
         int n_thread, int n_subsample, char *model_path, char *additional_model_paths,
         bool disable_clip, bool enable_conf_interval, bool enable_transform)
 {
@@ -238,7 +239,7 @@ int run_wrapper(enum VmafPixelFormat pix_fmt, int width, int height, char *ref_p
     struct data *s;
     s = (struct data *)malloc(sizeof(struct data));
     s->format = pix_fmt;
-    s->use_color = vmaf_feature_setting & VMAF_FEATURE_SETTING_DO_COLOR;
+    s->use_color = vmaf_feature_mode_setting & VMAF_FEATURE_MODE_SETTING_DO_COLOR;
     s->width = width;
     s->height = height;
     s->ref_rfile = NULL;
@@ -317,20 +318,18 @@ int run_wrapper(enum VmafPixelFormat pix_fmt, int width, int height, char *ref_p
 
     // fill context with data
     vmafSettings->pix_fmt = pix_fmt;
-
     vmafSettings->width = width;
     vmafSettings->height = height;
 
     vmafSettings->log_path = log_path;
 
-    vmafSettings->disable_avx = disable_avx;
-
     vmafSettings->log_fmt = log_fmt;
-    vmafSettings->vmaf_feature_setting = vmaf_feature_setting;
+    vmafSettings->vmaf_feature_mode_setting = vmaf_feature_mode_setting;
     vmafSettings->pool_method = pool_method;
 
-    vmafSettings->n_thread = n_thread;
-    vmafSettings->n_subsample = n_subsample;
+    vmafSettings->vmaf_feature_calculation_setting.n_subsample = n_subsample;
+    vmafSettings->vmaf_feature_calculation_setting.n_threads = n_thread;
+    vmafSettings->vmaf_feature_calculation_setting.disable_avx = disable_avx;
 
     vmafSettings->default_model_ind = 0;
 
@@ -384,13 +383,13 @@ int main(int argc, char *argv[])
     char *additional_model_paths;
     char *log_path = NULL;
 
-    int vmaf_feature_setting = VMAF_FEATURE_SETTING_DO_NONE;
+    int vmaf_feature_mode_setting = VMAF_FEATURE_MODE_SETTING_DO_NONE;
     enum VmafPixelFormat pix_fmt = VMAF_PIX_FMT_UNKNOWN;
     enum VmafLogFmt log_fmt = VMAF_LOG_FMT_XML;
     enum VmafPoolingMethod pool_method = VMAF_POOL_MEAN;
 
-    int n_thread = 0;
-    int n_subsample = 1;
+    unsigned int n_thread = 0;
+    unsignedint n_subsample = 1;
 
     char *temp;
 #if MEM_LEAK_TEST_ENABLE	
@@ -527,7 +526,7 @@ int main(int argc, char *argv[])
         disable_avx = true;
     }
 
-    // use these parameters for the first model (default VMAF)
+    // use these parameters for the default VMAF model
 
     bool disable_clip = false;
     bool enable_transform = false;
@@ -550,21 +549,21 @@ int main(int argc, char *argv[])
 
     additional_model_paths = getCmdOption(argv + 7, argv + argc, "--additional-models");
 
-    // populate VmafFeatureSetting
+    // populate VmafFeatureModeSetting
 
     if (cmdOptionExists(argv + 7, argv + argc, "--psnr"))
     {
-        vmaf_feature_setting |= VMAF_FEATURE_SETTING_DO_PSNR;
+        vmaf_feature_setting |= VMAF_FEATURE_MODE_SETTING_DO_PSNR;
     }
 
     if (cmdOptionExists(argv + 7, argv + argc, "--ssim"))
     {
-        vmaf_feature_setting |= VMAF_FEATURE_SETTING_DO_SSIM;
+        vmaf_feature_setting |= VMAF_FEATURE_MODE_SETTING_DO_SSIM;
     }
 
     if (cmdOptionExists(argv + 7, argv + argc, "--ms-ssim"))
     {
-        vmaf_feature_setting |= VMAF_FEATURE_SETTING_DO_MS_SSIM;
+        vmaf_feature_setting |= VMAF_FEATURE_MODE_SETTING_DO_MS_SSIM;
     }
 
     if (cmdOptionExists(argv + 7, argv + argc, "--color"))
