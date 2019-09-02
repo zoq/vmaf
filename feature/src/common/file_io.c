@@ -213,22 +213,22 @@ int offset_image_s(float *buf, float off, int width, int height, int stride)
 
 int offset_vmaf_picture(VmafPicture *vmaf_pict, float off)
 {
+    char *byte_ptr = (char *)(vmaf_pict->data[0]);
 	unsigned int ret = 1;
 	int i, j;
-	char *byte_ptr = (char *)(vmaf_pict->data_y);
 
 //	unsigned int channel = 0;
 
-	for (i = 0; i < vmaf_pict->h; ++i)
+	for (i = 0; i < vmaf_pict->h[0]; ++i)
 	{
 		float *row_ptr = (float *)byte_ptr;
 
-		for (j = 0; j < vmaf_pict->w; ++j)
+		for (j = 0; j < vmaf_pict->w[0]; ++j)
 		{
 			row_ptr[j] += off;
 		}
 
-		byte_ptr += vmaf_pict->stride_byte;
+		byte_ptr += vmaf_pict->stride_byte[0];
 	}
 
 	ret = 0;

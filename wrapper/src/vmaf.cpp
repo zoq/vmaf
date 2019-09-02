@@ -602,7 +602,7 @@ void VmafQualityRunner::_set_prediction_result(
 
 void VmafQualityRunner::feature_extract(Result &result,
                         int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
-                        int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),
+                        int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, void *user_data),
                         void *user_data, VmafSettings *vmafSettings)
 {
     dbg_printf("Initialize storage arrays...\n");
@@ -1036,7 +1036,7 @@ void BootstrapVmafQualityRunner::_set_prediction_result(
 }
 
 double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
-               int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),
+               int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, void *user_data),
                void *user_data, VmafSettings *vmafSettings)
 {
     printf("Start calculating VMAF score...\n");
@@ -1068,14 +1068,11 @@ double RunVmaf(int (*read_frame)(float *ref_data, float *main_data, float *temp_
     unsigned int num_models = vmafSettings->num_models;
     for (int i = 0; i < num_models; i ++)
     {
-        fprintf(stderr, "model_name is: %s\n", vmafSettings->vmaf_model[i].name);
-//        fprintf(stderr, "model_path is: %s\n", vmafSettings->vmaf_model[i].path);
         std::unique_ptr<IVmafQualityRunner> runner_ptr =
             VmafQualityRunnerFactory::createVmafQualityRunner(&(vmafSettings->vmaf_model[i]));
         // predict using i-th model
         runner_ptr->predict(result, &(vmafSettings->vmaf_model[i]));
     }
-
 
     timer.stop();
 

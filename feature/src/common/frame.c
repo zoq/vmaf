@@ -79,21 +79,50 @@ const char* get_fmt_str_from_fmt_enum(enum VmafPixelFormat fmt_enum)
     }
 }
 
-int read_vmaf_picture(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride_byte, void *s)
+int read_vmaf_picture(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, void *s)
 {
     struct data *user_data = (struct data *)s;
     bool use_color = user_data->use_color;
+    enum VmafPixelFormat format = user_data->format;
+    unsigned int w = user_data->width;
+    unsigned int h = user_data->height;
     int ret;
+
+    ref_vmaf_pict->pix_fmt = format;
+    ref_vmaf_pict->w[0] = w;
+    ref_vmaf_pict->h[0] = h;
+
+    dis_vmaf_pict->pix_fmt = format;
+    dis_vmaf_pict->w[0] = w;
+    dis_vmaf_pict->h[0] = h;
+
+    int color_resolution_ret = get_color_resolution(ref_vmaf_pict->pix_fmt, ref_vmaf_pict->w[0],
+        ref_vmaf_pict->h[0], &(ref_vmaf_pict->w[1]), &(ref_vmaf_pict->h[1]),
+        &(ref_vmaf_pict->w[2]), &(ref_vmaf_pict->h[2]));
+
+    if (color_resolution_ret) {
+        fprintf(stderr, "Calculating resolutions for color channels for ref failed.\n");
+        return 1;
+    }
+    color_resolution_ret = get_color_resolution(dis_vmaf_pict->pix_fmt, dis_vmaf_pict->w[0],
+        dis_vmaf_pict->h[0], &(dis_vmaf_pict->w[1]), &(dis_vmaf_pict->h[1]),
+        &(dis_vmaf_pict->w[2]), &(dis_vmaf_pict->h[2]));
+
+    if (color_resolution_ret) {
+        fprintf(stderr, "Calculating resolutions for color channels for dis failed.\n");
+        return 1;
+    }
+
+    ref_vmaf_pict->stride_byte[0] = get_stride_byte_from_width(ref_vmaf_pict->w[0]);
+    ref_vmaf_pict->stride_byte[1] = get_stride_byte_from_width(ref_vmaf_pict->w[1]);
+    ref_vmaf_pict->stride_byte[2] = get_stride_byte_from_width(ref_vmaf_pict->w[2]);
+
+    dis_vmaf_pict->stride_byte[0] = get_stride_byte_from_width(dis_vmaf_pict->w[0]);
+    dis_vmaf_pict->stride_byte[1] = get_stride_byte_from_width(dis_vmaf_pict->w[1]);
+    dis_vmaf_pict->stride_byte[2] = get_stride_byte_from_width(dis_vmaf_pict->w[2]);
 
     enum VmafPixelFormat ref_fmt = ref_vmaf_pict->pix_fmt;
     enum VmafPixelFormat dis_fmt = dis_vmaf_pict->pix_fmt;
-
-    // check that ref and dis pictures have same pixel format, same resolution in Y, U and V
-    if (ref_fmt != dis_fmt)
-    {
-        fprintf(stderr, "Ref pixel format is %s, but dis pixel format is %s.\n", get_fmt_str_from_fmt_enum(ref_fmt), get_fmt_str_from_fmt_enum(dis_fmt));
-        return 1;
-    }
 
     // TODO: MORE CHECKS FOR RESOLUTION HERE
 

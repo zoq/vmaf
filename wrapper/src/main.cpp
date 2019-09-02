@@ -137,7 +137,10 @@ unsigned int _get_additional_models(char *model_paths, VmafModel *vmaf_model)
 
         unsigned int additional_model_ind = 0;
 
-        for (TableIterator kv_pair(additional_model_path_val); kv_pair(); ) {
+        Tab tt = MakeTab(Tab(GetString(additional_model_path_val)));
+        It kv_pair(tt);
+
+        while (kv_pair()) {
 
             if (additional_model_ind + 1 > MAX_NUM_VMAF_MODELS)
             {
@@ -150,12 +153,20 @@ unsigned int _get_additional_models(char *model_paths, VmafModel *vmaf_model)
             // the value corresponds to a dictionary as well that we parse
 
             std::string name = GetString(kv_pair.key());
-            fprintf(stderr, "model name will be: %s\n", name.c_str());
-            vmaf_model[additional_model_ind + 1].name = name.c_str();
 
-            bool enable_conf_interval = false;
-            bool enable_transform = false;
-            bool disable_clip = false;
+            vmaf_model[additional_model_ind + 1].name = (char*)malloc(sizeof(name) * sizeof(char));
+
+            if (!vmaf_model[additional_model_ind + 1].name)
+            {
+                fprintf(stderr, "Malloc for additional model %d failed.\n", additional_model_ind);
+                return -1;
+            }
+
+            strcpy(vmaf_model[additional_model_ind + 1].name, name.c_str());
+
+            vmaf_model[additional_model_ind + 1].enable_conf_interval = false;
+            vmaf_model[additional_model_ind + 1].enable_transform = false;
+            vmaf_model[additional_model_ind + 1].disable_clip = false;
             std::string path = "";
 
             model_values = GetString(kv_pair.value());
@@ -167,20 +178,23 @@ unsigned int _get_additional_models(char *model_paths, VmafModel *vmaf_model)
             istringstream inner_is(model_values.c_str());
             ReadValFromJSONStream(inner_is, inner_additional_model_path_val);
 
-            for (TableIterator inner_kv_pair(inner_additional_model_path_val); inner_kv_pair(); ) {
+            Tab inner_tt = MakeTab(Tab(GetString(inner_additional_model_path_val)));
+            It inner_kv_pair(inner_tt);
+
+            while (inner_kv_pair()) {
 
                 use_option = !strcmp(GetString(inner_kv_pair.value()).c_str(), "1");
                 if (!strcmp(GetString(inner_kv_pair.key()).c_str(), "model_path")) {
                     path = GetString(inner_kv_pair.value());
                 }
                 else if (!strcmp(GetString(inner_kv_pair.key()).c_str(), "enable_transform")) {
-                    enable_transform = use_option;
+                    vmaf_model[additional_model_ind + 1].enable_transform = use_option;
                 }
                 else if (!strcmp(GetString(inner_kv_pair.key()).c_str(), "enable_conf_interval")) {
-                    enable_conf_interval = use_option;
+                    vmaf_model[additional_model_ind + 1].enable_conf_interval = use_option;
                 }
                 else if (!strcmp(GetString(inner_kv_pair.key()).c_str(), "disable_clip")) {
-                    disable_clip = use_option;
+                    vmaf_model[additional_model_ind + 1].disable_clip = use_option;
                 }
                 else {
                     unknown_option_exception = "Additional model option " + GetString(inner_kv_pair.key()) + " is unknown.";
@@ -190,32 +204,19 @@ unsigned int _get_additional_models(char *model_paths, VmafModel *vmaf_model)
 
             }
 
-            vmaf_model[additional_model_ind + 1].enable_transform = enable_transform;
-            vmaf_model[additional_model_ind + 1].enable_conf_interval = enable_conf_interval;
-            vmaf_model[additional_model_ind + 1].disable_clip = disable_clip;
-            vmaf_model[additional_model_ind + 1].path = path.c_str();
+            vmaf_model[additional_model_ind + 1].path = (char*)malloc(sizeof(path) * sizeof(char));
+
+            if (!vmaf_model[additional_model_ind + 1].path)
+            {
+                fprintf(stderr, "Malloc for additional model path %d failed.\n", additional_model_ind);
+                return -1;
+            }
+
+            strcpy(vmaf_model[additional_model_ind + 1].path, path.c_str());
 
             additional_model_ind += 1;
 
         }
-
-        fprintf(stderr, "model_name 0 is: %s\n", vmaf_model[0].name);
-        fprintf(stderr, "model_path 0 is: %s\n", vmaf_model[0].path);
-        fprintf(stderr, "model_ci   0 is: %d\n", vmaf_model[0].enable_conf_interval);
-        fprintf(stderr, "model_et   0 is: %d\n", vmaf_model[0].enable_transform);
-        fprintf(stderr, "model_dc   0 is: %d\n", vmaf_model[0].disable_clip);
-
-        fprintf(stderr, "model_name 1 is: %s\n", vmaf_model[1].name);
-        fprintf(stderr, "model_path 1 is: %s\n", vmaf_model[1].path);
-        fprintf(stderr, "model_ci   1 is: %d\n", vmaf_model[1].enable_conf_interval);
-        fprintf(stderr, "model_et   1 is: %d\n", vmaf_model[1].enable_transform);
-        fprintf(stderr, "model_dc   1 is: %d\n", vmaf_model[1].disable_clip);
-
-        fprintf(stderr, "model_name 2 is: %s\n", vmaf_model[2].name);
-        fprintf(stderr, "model_path 2 is: %s\n", vmaf_model[2].path);
-        fprintf(stderr, "model_ci   2 is: %d\n", vmaf_model[2].enable_conf_interval);
-        fprintf(stderr, "model_et   2 is: %d\n", vmaf_model[2].enable_transform);
-        fprintf(stderr, "model_dc   2 is: %d\n", vmaf_model[2].disable_clip);
 
         return additional_model_ind;
 
@@ -313,11 +314,18 @@ int run_wrapper(enum VmafPixelFormat pix_fmt, int width, int height, char *ref_p
         s->num_frames = -1;
     }
 
-    // initialize context
+    // initialize settings
     VmafSettings *vmafSettings;
     vmafSettings = (VmafSettings *)malloc(sizeof(VmafSettings));
 
-    // fill context with data
+    if (!vmafSettings)
+    {
+        fprintf(stderr, "Malloc for VMAF settings failed.\n");
+        return 1;
+        goto fail_or_end;
+    }
+
+    // fill settings with data
     vmafSettings->pix_fmt = pix_fmt;
     vmafSettings->width = width;
     vmafSettings->height = height;
@@ -356,7 +364,16 @@ int run_wrapper(enum VmafPixelFormat pix_fmt, int width, int height, char *ref_p
     /* Run VMAF */
     ret = compute_vmaf(&score, read_frame, read_vmaf_picture, s, vmafSettings);
 
-    // free VMAF context
+    // free memory relevant to additional models
+    for (int i = 0; i < vmafSettings->num_models; i ++)
+    {
+        if (i != vmafSettings->default_model_ind) {
+            free((char*)vmafSettings->vmaf_model[i].name);
+            free((char*)vmafSettings->vmaf_model[i].path);
+        }
+    }
+
+    // free VMAF settings
     free(vmafSettings);
 
 fail_or_end:

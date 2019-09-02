@@ -36,7 +36,7 @@ extern "C" {
 typedef struct
 {
     int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data);
-    int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride_byte, void *user_data);
+    int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, void *user_data);
     void *user_data;
     int w;
     int h;
@@ -95,7 +95,7 @@ typedef struct
 void* combo_threadfunc(void* vmaf_thread_data);
 
 int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
-        int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),
+        int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, void *user_data),
         void *user_data, int w, int h, enum VmafPixelFormat fmt,
         DArray *adm_num_array,
         DArray *adm_den_array,

@@ -46,7 +46,7 @@ struct noref_data
 
 int read_frame(float *ref_data, float *dis_data, float *temp_data, int stride_byte, void *s);
 
-int read_vmaf_picture(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride_byte, void *s);
+int read_vmaf_picture(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, void *s);
 
 int read_noref_frame(float *dis_data, float *temp_data, int stride_byte, void *s);
 

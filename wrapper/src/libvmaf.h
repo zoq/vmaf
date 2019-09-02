@@ -82,8 +82,8 @@ typedef struct VmafPicture
 } VmafPicture;
 
 typedef struct {
-    const char *name;
-    const char *path;
+    char *name;
+    char *path;
     bool enable_transform;
     bool disable_clip;
     bool enable_conf_interval;
@@ -110,7 +110,7 @@ typedef struct {
 
 int compute_vmaf(double* vmaf_score,
                  int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride_byte, void *user_data),
-                 int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),
+                 int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, void *user_data),
 				 void *user_data, VmafSettings *vmafSettings);
 
 #ifdef __cplusplus

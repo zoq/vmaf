@@ -74,7 +74,7 @@ void* combo_threadfunc(void* vmaf_thread_data)
     char* errmsg = thread_data->errmsg;
     void* user_data = thread_data->user_data;
     enum VmafPixelFormat fmt = thread_data->fmt;
-    int n_subsample = thread_data->n_subsample;
+    unsigned int n_subsample = thread_data->n_subsample;
     bool use_color = thread_data->use_color;
 
     double score = 0;
@@ -89,15 +89,24 @@ void* combo_threadfunc(void* vmaf_thread_data)
     double score_psnr = 0;
 #endif
 
-//    VmafPicture *ref_vmaf_pict;
-//    VmafPicture *dis_vmaf_pict;
-//
-//    ref_vmaf_pict = (VmafPicture *)malloc(sizeof(VmafPicture));
-//    dis_vmaf_pict = (VmafPicture *)malloc(sizeof(VmafPicture));
-//
-//    ref_vmaf_pict->data[0] = 0; dis_vmaf_pict->data[0] = 0;
-//    ref_vmaf_pict->data[1] = 0; dis_vmaf_pict->data[1] = 0;
-//    ref_vmaf_pict->data[2] = 0; dis_vmaf_pict->data[2] = 0;
+    VmafPicture ref_vmaf_pict = {
+        .data[0] = 0, .data[1] = 0, .data[2] = 0,
+        .w[0] = 0, .w[1] = 0, .w[2] = 0,
+        .h[0] = 0, .h[1] = 0, .h[2] = 0,
+        .stride_byte[0] = 0, .stride_byte[1] = 0, .stride_byte[2] = 0,
+        .pix_fmt = VMAF_PIX_FMT_UNKNOWN
+    };
+
+    VmafPicture dis_vmaf_pict = {
+        .data[0] = 0, .data[1] = 0, .data[2] = 0,
+        .w[0] = 0, .w[1] = 0, .w[2] = 0,
+        .h[0] = 0, .h[1] = 0, .h[2] = 0,
+        .stride_byte[0] = 0, .stride_byte[1] = 0, .stride_byte[2] = 0,
+        .pix_fmt = VMAF_PIX_FMT_UNKNOWN
+    };
+
+    VmafPicture *ref_vmaf_pict_ptr = &ref_vmaf_pict;
+    VmafPicture *dis_vmaf_pict_ptr = &dis_vmaf_pict;
 
     float *ref_buf = 0; float *ref_buf_u = 0; float *ref_buf_v = 0;
     float *dis_buf = 0; float *dis_buf_u = 0; float *dis_buf_v = 0;
@@ -120,13 +129,6 @@ void* combo_threadfunc(void* vmaf_thread_data)
     bool next_frame_read;
 
     bool offset_flag = false;
-
-#ifdef MULTI_THREADING
-    float *prev_blur_buf_ = 0;
-    float *ref_buf_ = 0;
-    float *dis_buf_ = 0;
-    float *blur_buf_ = 0;
-#endif
 
     // use temp_buf for convolution_f32_c, and fread u and v
     if (!(temp_buf = aligned_malloc(data_sz * 2, MAX_ALIGN)))
@@ -190,58 +192,20 @@ void* combo_threadfunc(void* vmaf_thread_data)
                 }
             }
 
-//            ref_vmaf_pict->data[0] = ref_buf;
-//            ref_vmaf_pict->pix_fmt = fmt;
-//            ref_vmaf_pict->w[0] = w;
-//            ref_vmaf_pict->h[0] = h;
-//            ref_vmaf_pict->stride_byte[0] = get_stride_byte_from_width(ref_vmaf_pict->w[0]);
-//
-//            int color_resolution_ret = get_color_resolution(ref_vmaf_pict->pix_fmt, ref_vmaf_pict->w[0],
-//                ref_vmaf_pict->h[0], &(ref_vmaf_pict->w[1]), &(ref_vmaf_pict->h[1]),
-//                &(ref_vmaf_pict->w[2]), &(ref_vmaf_pict->h[2]));
-//
-//            if (color_resolution_ret) {
-//                fprintf(stderr, "Calculating resolutions for color channels for ref failed.\n");
-//                goto fail_or_end;
-//            }
-//
-//            ref_vmaf_pict->stride_byte[1] = get_stride_byte_from_width(ref_vmaf_pict->w[1]);
-//            ref_vmaf_pict->stride_byte[2] = get_stride_byte_from_width(ref_vmaf_pict->w[2]);
-//
-//            dis_vmaf_pict->data[0] = dis_buf;
-//            dis_vmaf_pict->pix_fmt = fmt;
-//            dis_vmaf_pict->w[0] = w;
-//            dis_vmaf_pict->h[0] = h;
-//
-//            color_resolution_ret = get_color_resolution(dis_vmaf_pict->pix_fmt, dis_vmaf_pict->w[0],
-//                dis_vmaf_pict->h[0], &(dis_vmaf_pict->w[1]), &(dis_vmaf_pict->h[1]),
-//                &(dis_vmaf_pict->w[2]), &(dis_vmaf_pict->h[2]));
-//
-//            if (color_resolution_ret) {
-//                fprintf(stderr, "Calculating resolutions for color channels for dis failed.\n");
-//                goto fail_or_end;
-//            }
-//
-//            dis_vmaf_pict->stride_byte[0] = get_stride_byte_from_width(dis_vmaf_pict->w[0]);
-//            dis_vmaf_pict->stride_byte[1] = get_stride_byte_from_width(dis_vmaf_pict->w[1]);
-//            dis_vmaf_pict->stride_byte[2] = get_stride_byte_from_width(dis_vmaf_pict->w[2]);
+            ref_vmaf_pict_ptr->data[0] = ref_buf;
+            dis_vmaf_pict_ptr->data[0] = dis_buf;
 
-//            fprintf(stderr,"Ref: %dx%d, %dx%d, %dx%d.\n", ref_vmaf_pict->w[0], ref_vmaf_pict->h[0], ref_vmaf_pict->w[1],
-//                ref_vmaf_pict->h[1], ref_vmaf_pict->w[2], ref_vmaf_pict->h[2]);
-//            fprintf(stderr,"Dis: %dx%d, %dx%d, %dx%d.\n", dis_vmaf_pict->w[0], dis_vmaf_pict->h[0], dis_vmaf_pict->w[1],
-//                dis_vmaf_pict->h[1], dis_vmaf_pict->w[2], dis_vmaf_pict->h[2]);
-
-//            if (use_color)
-//            {
-//                ref_vmaf_pict->data[1] = ref_buf_u;
-//                dis_vmaf_pict->data[1] = dis_buf_u;
-//                ref_vmaf_pict->data[2] = ref_buf_v;
-//                dis_vmaf_pict->data[2] = dis_buf_v;
-//            }
+            if (use_color)
+            {
+                ref_vmaf_pict_ptr->data[1] = ref_buf_u;
+                dis_vmaf_pict_ptr->data[1] = dis_buf_u;
+                ref_vmaf_pict_ptr->data[2] = ref_buf_v;
+                dis_vmaf_pict_ptr->data[2] = dis_buf_v;
+            }
 
             // read frame from file
-//            ret = thread_data->read_vmaf_picture(ref_vmaf_pict, dis_vmaf_pict, temp_buf, stride, user_data);
-            ret = thread_data->read_frame(ref_buf, dis_buf, temp_buf, stride, user_data);
+            ret = thread_data->read_vmaf_picture(ref_vmaf_pict_ptr, dis_vmaf_pict_ptr, temp_buf, user_data);
+//            ret = thread_data->read_frame(ref_buf, dis_buf, temp_buf, stride, user_data);
 
             if ((ret == 1) || (ret == 2))
             {
@@ -256,18 +220,20 @@ void* combo_threadfunc(void* vmaf_thread_data)
             // offset pixel by OPT_RANGE_PIXEL_OFFSET (no offset for color for now)
             // ===============================================================
 
-//            offset_vmaf_picture(ref_vmaf_pict, OPT_RANGE_PIXEL_OFFSET);
-//            offset_vmaf_picture(dis_vmaf_pict, OPT_RANGE_PIXEL_OFFSET);
+//            fprintf(stderr, "stride: %d, stride_byte for y: %u.\n", stride, ref_vmaf_pict_ptr->stride_byte[0]);
 
-//            ref_buf = ref_vmaf_pict->data[0];
-//            dis_buf = dis_vmaf_pict->data[0];
+//            offset_vmaf_picture(ref_vmaf_pict_ptr, OPT_RANGE_PIXEL_OFFSET);
+//            offset_vmaf_picture(dis_vmaf_pict_ptr, OPT_RANGE_PIXEL_OFFSET);
 
-//            if (use_color) {
-//                ref_buf_u = ref_vmaf_pict->data[1];
-//                dis_buf_u = dis_vmaf_pict->data[1];
-//                ref_buf_v = ref_vmaf_pict->data[2];
-//                dis_buf_v = dis_vmaf_pict->data[2];
-//            }
+            ref_buf = ref_vmaf_pict_ptr->data[0];
+            dis_buf = dis_vmaf_pict_ptr->data[0];
+
+            if (use_color) {
+                ref_buf_u = ref_vmaf_pict_ptr->data[1];
+                dis_buf_u = dis_vmaf_pict_ptr->data[1];
+                ref_buf_v = ref_vmaf_pict_ptr->data[2];
+                dis_buf_v = dis_vmaf_pict_ptr->data[2];
+            }
 
             // ===============================================================
             // offset pixel by OPT_RANGE_PIXEL_OFFSET (no offset for color for now)
@@ -352,18 +318,18 @@ void* combo_threadfunc(void* vmaf_thread_data)
             }
         }
 
-//        ref_vmaf_pict->data[0] = next_ref_buf;
-//        dis_vmaf_pict->data[0] = next_dis_buf;
+        ref_vmaf_pict_ptr->data[0] = next_ref_buf;
+        dis_vmaf_pict_ptr->data[0] = next_dis_buf;
 
-//        if (use_color) {
-//            ref_vmaf_pict->data[1] = next_ref_buf_u;
-//            dis_vmaf_pict->data[1] = next_dis_buf_u;
-//            ref_vmaf_pict->data[2] = next_ref_buf_v;
-//            dis_vmaf_pict->data[2] = next_dis_buf_v;
-//        }
+        if (use_color) {
+            ref_vmaf_pict_ptr->data[1] = next_ref_buf_u;
+            dis_vmaf_pict_ptr->data[1] = next_dis_buf_u;
+            ref_vmaf_pict_ptr->data[2] = next_ref_buf_v;
+            dis_vmaf_pict_ptr->data[2] = next_dis_buf_v;
+        }
 
-//        ret = thread_data->read_vmaf_picture(ref_vmaf_pict, dis_vmaf_pict, temp_buf, stride, user_data);
-        ret = thread_data->read_frame(ref_buf, dis_buf, temp_buf, stride, user_data);
+        ret = thread_data->read_vmaf_picture(ref_vmaf_pict_ptr, dis_vmaf_pict_ptr, temp_buf, user_data);
+//        ret = thread_data->read_frame(next_ref_buf, next_dis_buf, temp_buf, stride, user_data);
 
         if (ret == 1)
         {
@@ -385,15 +351,15 @@ void* combo_threadfunc(void* vmaf_thread_data)
             next_frame_read = true;
         }
 
-//        next_ref_buf = ref_vmaf_pict->data[0];
-//        next_dis_buf = dis_vmaf_pict->data[0];
+        next_ref_buf = ref_vmaf_pict_ptr->data[0];
+        next_dis_buf = dis_vmaf_pict_ptr->data[0];
 
-//        if (use_color) {
-//            next_ref_buf_u = ref_vmaf_pict->data[1];
-//            next_dis_buf_u = dis_vmaf_pict->data[1];
-//            next_ref_buf_v = ref_vmaf_pict->data[2];
-//            next_dis_buf_v = dis_vmaf_pict->data[2];
-//        }
+        if (use_color) {
+            next_ref_buf_u = ref_vmaf_pict_ptr->data[1];
+            next_dis_buf_u = dis_vmaf_pict_ptr->data[1];
+            next_ref_buf_v = ref_vmaf_pict_ptr->data[2];
+            next_dis_buf_v = dis_vmaf_pict_ptr->data[2];
+        }
 
         if (next_frame_read)
         {
@@ -471,21 +437,10 @@ void* combo_threadfunc(void* vmaf_thread_data)
 
             if (use_color) {
 
-                size_t w_u = 0, w_v = 0, h_u = 0, h_v = 0;
-
-                ret = get_color_resolution(fmt, w, h, &w_u, &h_u, &w_v, &h_v);
-
-//                fprintf(stderr, "w_y: %d, h_y: %d, w_u: %d, h_u: %d, w_v:%d, h_v:%d. \n", w, h, w_u, h_u, w_v, h_v);
-
-                if (ret)
-                {
-                    sprintf(errmsg, "Calculating resolutions for color channels failed C.\n");
-                    goto fail_or_end;
-                }
-
-                int stride_u = get_stride_byte_from_width(w_u);
-
-                ret = compute_psnr(ref_buf_u, dis_buf_u, w_u, h_u, stride_u, stride_u, &score, peak, psnr_max);
+                ret = compute_psnr(ref_vmaf_pict_ptr->data[1], dis_vmaf_pict_ptr->data[1],
+                    ref_vmaf_pict_ptr->w[1], ref_vmaf_pict_ptr->h[1],
+                    ref_vmaf_pict_ptr->stride_byte[1], dis_vmaf_pict_ptr->stride_byte[1],
+                    &score, peak, psnr_max);
 
                 if (ret)
                 {
@@ -497,9 +452,10 @@ void* combo_threadfunc(void* vmaf_thread_data)
 
                 insert_array_at(thread_data->psnr_u_array, score, frm_idx);
 
-                int stride_v = get_stride_byte_from_width(w_v);
-
-                ret = compute_psnr(ref_buf_v, dis_buf_v, w_v, h_v, stride_v, stride_v, &score, peak, psnr_max);
+                ret = compute_psnr(ref_vmaf_pict_ptr->data[2], dis_vmaf_pict_ptr->data[2],
+                    ref_vmaf_pict_ptr->w[2], ref_vmaf_pict_ptr->h[2],
+                    ref_vmaf_pict_ptr->stride_byte[2], dis_vmaf_pict_ptr->stride_byte[2],
+                    &score, peak, psnr_max);
 
                 if (ret)
                 {
@@ -593,12 +549,12 @@ void* combo_threadfunc(void* vmaf_thread_data)
         {
 
             /* =========== ansnr ============== */
-            if (!strcmp(fmt, "yuv420p") || !strcmp(fmt, "yuv422p") || !strcmp(fmt, "yuv444p"))
+            if (fmt == VMAF_PIX_FMT_YUV420P || fmt == VMAF_PIX_FMT_YUV422P || fmt == VMAF_PIX_FMT_YUV444P)
             {
                 // max psnr 60.0 for 8-bit per Ioannis
                 ret = compute_ansnr(ref_buf, dis_buf, w, h, stride, stride, &score, &score_psnr, 255.0, 60.0);
             }
-            else if (!strcmp(fmt, "yuv420p10le") || !strcmp(fmt, "yuv422p10le") || !strcmp(fmt, "yuv444p10le"))
+            else if (fmt == VMAF_PIX_FMT_YUV420P10LE || fmt == VMAF_PIX_FMT_YUV422P10LE || fmt == VMAF_PIX_FMT_YUV444P10LE)
             {
                 // 10 bit gets normalized to 8 bit, peak is 1023 / 4.0 = 255.75
                 // max psnr 72.0 for 10-bit per Ioannis
@@ -606,7 +562,7 @@ void* combo_threadfunc(void* vmaf_thread_data)
             }
             else
             {
-                sprintf(errmsg, "unknown format %s.\n", fmt);
+                sprintf(errmsg, "unknown format %s.\n", get_fmt_str_from_fmt_enum(fmt));
                 goto fail_or_end;
             }
             if (ret)
@@ -806,8 +762,6 @@ void* combo_threadfunc(void* vmaf_thread_data)
 
 fail_or_end:
 
-//    aligned_free(ref_vmaf_pict);
-//    aligned_free(dis_vmaf_pict);
     aligned_free(temp_buf);
 
 #ifdef MULTI_THREADING
@@ -824,7 +778,7 @@ fail_or_end:
 #ifdef MULTI_THREADING
 
 int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
-        int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),
+        int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, void *user_data),
         void *user_data, int w, int h, enum VmafPixelFormat fmt,
         DArray *adm_num_array,
         DArray *adm_den_array,
@@ -919,7 +873,7 @@ int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
 
     if (psnr_constants(fmt, &combo_thread_data.peak, &combo_thread_data.psnr_max))
     {
-        sprintf(errmsg, "unknown format %s.\n", fmt);
+        sprintf(errmsg, "unknown format %s.\n", get_fmt_str_from_fmt_enum(fmt));
         return -1;
     }
 
@@ -1018,7 +972,7 @@ int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
 #else // #ifdef MULTI_THREADING
 
 int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data),
-        int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride, void *user_data),
+        int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, void *user_data),
         void *user_data, int w, int h, enum VmafPixelFormat fmt,
         DArray *adm_num_array,
         DArray *adm_den_array,
@@ -1107,7 +1061,7 @@ int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
 
     if (psnr_constants(fmt, &combo_thread_data.peak, &combo_thread_data.psnr_max))
     {
-        sprintf(errmsg, "unknown format %s.\n", fmt);
+        sprintf(errmsg, "unknown format %s.\n", get_fmt_str_from_fmt_enum(fmt));
         return -1;
     }
 
