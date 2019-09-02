@@ -19,6 +19,7 @@
 #ifndef FRAME_H_
 #define FRAME_H_
 
+#include <string.h>
 #include "alloc.h"
 #include "libvmaf.h"
 
@@ -51,7 +52,7 @@ int read_noref_frame(float *dis_data, float *temp_data, int stride_byte, void *s
 
 int get_frame_offset(enum VmafPixelFormat fmt, int w, int h, size_t *offset);
 
-int get_color_resolution(enum VmafPixelFormat fmt, int w, int h, size_t *w_u, size_t *h_u, size_t *w_v, size_t *h_v);
+int get_color_resolution(enum VmafPixelFormat fmt, unsigned int w, unsigned int h, unsigned int *w_u, unsigned int *h_u, unsigned int *w_v, unsigned int *h_v);
 
 int get_stride_byte_from_width(int w);
 

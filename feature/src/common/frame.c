@@ -30,27 +30,85 @@
 
 static int completed_frames = 0;
 
-int read_vmaf_picture(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride_byte, void *s)
+enum VmafPixelFormat get_pix_fmt_from_input_char_ptr(const char *pix_fmt_option)
 {
-    struct data *user_data = (struct data *)s;
-    enum VmafPixelFormat fmt = user_data->format;
-    int w = user_data->width;
-    int h = user_data->height;
-    bool use_color = user_data->use_color;
-    int ret;
-
-    // read ref y
-    if (fmt == VMAF_PIX_FMT_YUV420P || fmt == VMAF_PIX_FMT_YUV422P || fmt == VMAF_PIX_FMT_YUV444P)
+    enum VmafPixelFormat pix_fmt;
+    if (!strcmp(pix_fmt_option, "yuv420p"))
     {
-        ret = read_image_b(user_data->ref_rfile, ref_vmaf_pict->data_y, 0, w, h, stride_byte);
+        pix_fmt = VMAF_PIX_FMT_YUV420P;
     }
-    else if (fmt == VMAF_PIX_FMT_YUV420P10LE || fmt == VMAF_PIX_FMT_YUV422P10LE || fmt == VMAF_PIX_FMT_YUV444P10LE)
+    else if (!strcmp(pix_fmt_option, "yuv422p"))
     {
-        ret = read_image_w(user_data->ref_rfile, ref_vmaf_pict->data_y, 0, w, h, stride_byte);
+        pix_fmt = VMAF_PIX_FMT_YUV422P;
+    }
+    else if (!strcmp(pix_fmt_option, "yuv444p"))
+    {
+        pix_fmt = VMAF_PIX_FMT_YUV444P;
+    }
+    else if (!strcmp(pix_fmt_option, "yuv420p10le"))
+    {
+        pix_fmt = VMAF_PIX_FMT_YUV420P10LE;
+    }
+    else if (!strcmp(pix_fmt_option, "yuv422p10le"))
+    {
+        pix_fmt = VMAF_PIX_FMT_YUV422P10LE;
+    }
+    else if (!strcmp(pix_fmt_option, "yuv444p10le"))
+    {
+        pix_fmt = VMAF_PIX_FMT_YUV444P10LE;
     }
     else
     {
-        fprintf(stderr, "unknown format %s.\n", fmt);
+        fprintf(stderr, "Unknown format %s.\n", pix_fmt_option);
+        pix_fmt = VMAF_PIX_FMT_UNKNOWN;
+    }
+    return pix_fmt;
+}
+
+const char* get_fmt_str_from_fmt_enum(enum VmafPixelFormat fmt_enum)
+{
+    switch (fmt_enum)
+    {
+        case VMAF_PIX_FMT_YUV420P: return "yuv420p";
+        case VMAF_PIX_FMT_YUV422P: return "yuv422p";
+        case VMAF_PIX_FMT_YUV444P: return "yuv444p";
+        case VMAF_PIX_FMT_YUV420P10LE: return "yuv420p10le";
+        case VMAF_PIX_FMT_YUV422P10LE: return "yuv422p10le";
+        case VMAF_PIX_FMT_YUV444P10LE: return "yuv444p10le";
+        default: return "unknown";
+    }
+}
+
+int read_vmaf_picture(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, int stride_byte, void *s)
+{
+    struct data *user_data = (struct data *)s;
+    bool use_color = user_data->use_color;
+    int ret;
+
+    enum VmafPixelFormat ref_fmt = ref_vmaf_pict->pix_fmt;
+    enum VmafPixelFormat dis_fmt = dis_vmaf_pict->pix_fmt;
+
+    // check that ref and dis pictures have same pixel format, same resolution in Y, U and V
+    if (ref_fmt != dis_fmt)
+    {
+        fprintf(stderr, "Ref pixel format is %s, but dis pixel format is %s.\n", get_fmt_str_from_fmt_enum(ref_fmt), get_fmt_str_from_fmt_enum(dis_fmt));
+        return 1;
+    }
+
+    // TODO: MORE CHECKS FOR RESOLUTION HERE
+
+    // read ref y
+    if (ref_fmt == VMAF_PIX_FMT_YUV420P || ref_fmt == VMAF_PIX_FMT_YUV422P || ref_fmt == VMAF_PIX_FMT_YUV444P)
+    {
+        ret = read_image_b(user_data->ref_rfile, ref_vmaf_pict->data[0], 0, ref_vmaf_pict->w[0], ref_vmaf_pict->h[0], ref_vmaf_pict->stride_byte[0]);
+    }
+    else if (ref_fmt == VMAF_PIX_FMT_YUV420P10LE || ref_fmt == VMAF_PIX_FMT_YUV422P10LE || ref_fmt == VMAF_PIX_FMT_YUV444P10LE)
+    {
+        ret = read_image_w(user_data->ref_rfile, ref_vmaf_pict->data[0], 0, ref_vmaf_pict->w[0], ref_vmaf_pict->h[0], ref_vmaf_pict->stride_byte[0]);
+    }
+    else
+    {
+        fprintf(stderr, "unknown format %s.\n", get_fmt_str_from_fmt_enum(ref_fmt));
         return 1;
     }
     if (ret)
@@ -63,17 +121,17 @@ int read_vmaf_picture(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, fl
     }
 
     // read dis y
-    if (fmt == VMAF_PIX_FMT_YUV420P || fmt == VMAF_PIX_FMT_YUV422P || fmt == VMAF_PIX_FMT_YUV444P)
+    if (dis_fmt == VMAF_PIX_FMT_YUV420P || dis_fmt == VMAF_PIX_FMT_YUV422P || dis_fmt == VMAF_PIX_FMT_YUV444P)
     {
-        ret = read_image_b(user_data->dis_rfile, dis_vmaf_pict->data_y, 0, w, h, stride_byte);
+        ret = read_image_b(user_data->dis_rfile, dis_vmaf_pict->data[0], 0, dis_vmaf_pict->w[0], dis_vmaf_pict->h[0], dis_vmaf_pict->stride_byte[0]);
     }
-    else if (fmt == VMAF_PIX_FMT_YUV420P10LE || fmt == VMAF_PIX_FMT_YUV422P10LE || fmt == VMAF_PIX_FMT_YUV444P10LE)
+    else if (dis_fmt == VMAF_PIX_FMT_YUV420P10LE || dis_fmt == VMAF_PIX_FMT_YUV422P10LE || dis_fmt == VMAF_PIX_FMT_YUV444P10LE)
     {
-        ret = read_image_w(user_data->dis_rfile, dis_vmaf_pict->data_y, 0, w, h, stride_byte);
+        ret = read_image_w(user_data->dis_rfile, dis_vmaf_pict->data[0], 0, dis_vmaf_pict->w[0], dis_vmaf_pict->h[0], dis_vmaf_pict->stride_byte[0]);
     }
     else
     {
-        fprintf(stderr, "unknown format %s.\n", fmt);
+        fprintf(stderr, "unknown format %s.\n", get_fmt_str_from_fmt_enum(dis_fmt));
         return 1;
     }
     if (ret)
@@ -87,9 +145,8 @@ int read_vmaf_picture(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, fl
 
     if (!use_color)
     {
-
         // ref skip u and v
-        if (fmt == VMAF_PIX_FMT_YUV420P || fmt == VMAF_PIX_FMT_YUV422P || fmt == VMAF_PIX_FMT_YUV444P)
+        if (ref_fmt == VMAF_PIX_FMT_YUV420P || ref_fmt == VMAF_PIX_FMT_YUV422P || ref_fmt == VMAF_PIX_FMT_YUV444P)
         {
             if (fread(temp_data, 1, user_data->offset, user_data->ref_rfile) != (size_t)user_data->offset)
             {
@@ -97,7 +154,7 @@ int read_vmaf_picture(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, fl
                 goto fail_or_end;
             }
         }
-        else if (fmt == VMAF_PIX_FMT_YUV420P10LE || fmt == VMAF_PIX_FMT_YUV422P10LE || fmt == VMAF_PIX_FMT_YUV444P10LE)
+        else if (ref_fmt == VMAF_PIX_FMT_YUV420P10LE || ref_fmt == VMAF_PIX_FMT_YUV422P10LE || ref_fmt == VMAF_PIX_FMT_YUV444P10LE)
         {
             if (fread(temp_data, 2, user_data->offset, user_data->ref_rfile) != (size_t)user_data->offset)
             {
@@ -107,12 +164,12 @@ int read_vmaf_picture(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, fl
         }
         else
         {
-            fprintf(stderr, "unknown format %s.\n", fmt);
+            fprintf(stderr, "unknown format %s.\n", get_fmt_str_from_fmt_enum(ref_fmt));
             goto fail_or_end;
         }
 
         // dis skip u and v
-        if (fmt == VMAF_PIX_FMT_YUV420P || fmt == VMAF_PIX_FMT_YUV422P || fmt == VMAF_PIX_FMT_YUV444P)
+        if (dis_fmt == VMAF_PIX_FMT_YUV420P || dis_fmt == VMAF_PIX_FMT_YUV422P || dis_fmt == VMAF_PIX_FMT_YUV444P)
         {
             if (fread(temp_data, 1, user_data->offset, user_data->dis_rfile) != (size_t)user_data->offset)
             {
@@ -120,7 +177,7 @@ int read_vmaf_picture(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, fl
                 goto fail_or_end;
             }
         }
-        else if (fmt == VMAF_PIX_FMT_YUV420P10LE || fmt == VMAF_PIX_FMT_YUV422P10LE || fmt == VMAF_PIX_FMT_YUV444P10LE)
+        else if (dis_fmt == VMAF_PIX_FMT_YUV420P10LE || dis_fmt == VMAF_PIX_FMT_YUV422P10LE || dis_fmt == VMAF_PIX_FMT_YUV444P10LE)
         {
             if (fread(temp_data, 2, user_data->offset, user_data->dis_rfile) != (size_t)user_data->offset)
             {
@@ -130,37 +187,24 @@ int read_vmaf_picture(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, fl
         }
         else
         {
-            fprintf(stderr, "unknown format %s.\n", fmt);
+            fprintf(stderr, "unknown format %s.\n", get_fmt_str_from_fmt_enum(dis_fmt));
             goto fail_or_end;
         }
     }
     else
     {
-
-        size_t w_u = 0, w_v = 0, h_u = 0, h_v = 0;
-
-        int color_resolution_ret = get_color_resolution(fmt, w, h, &w_u, &h_u, &w_v, &h_v);
-
-        if (color_resolution_ret) {
-            fprintf(stderr, "Calculating resolutions for color channels failed B.\n");
-            goto fail_or_end;
-        }
-
-        size_t stride_byte_u = get_stride_byte_from_width(w_u);
-        size_t stride_byte_v = get_stride_byte_from_width(w_v);
-
         // read ref u
-        if (fmt == VMAF_PIX_FMT_YUV420P || fmt == VMAF_PIX_FMT_YUV422P || fmt == VMAF_PIX_FMT_YUV444P)
+        if (ref_fmt == VMAF_PIX_FMT_YUV420P || ref_fmt == VMAF_PIX_FMT_YUV422P || ref_fmt == VMAF_PIX_FMT_YUV444P)
         {
-            ret = read_image_b(user_data->ref_rfile, ref_vmaf_pict->data_u, 0, w_u, h_u, stride_byte_u);
+            ret = read_image_b(user_data->ref_rfile, ref_vmaf_pict->data[1], 0, ref_vmaf_pict->w[1], ref_vmaf_pict->h[1], ref_vmaf_pict->stride_byte[1]);
         }
-        else if (fmt == VMAF_PIX_FMT_YUV420P10LE || fmt == VMAF_PIX_FMT_YUV422P10LE || fmt == VMAF_PIX_FMT_YUV444P10LE)
+        else if (ref_fmt == VMAF_PIX_FMT_YUV420P10LE || ref_fmt == VMAF_PIX_FMT_YUV422P10LE || ref_fmt == VMAF_PIX_FMT_YUV444P10LE)
         {
-            ret = read_image_w(user_data->ref_rfile, ref_vmaf_pict->data_u, 0, w_u, h_u, stride_byte_u);
+            ret = read_image_w(user_data->ref_rfile, ref_vmaf_pict->data[1], 0, ref_vmaf_pict->w[1], ref_vmaf_pict->h[1], ref_vmaf_pict->stride_byte[1]);
         }
         else
         {
-            fprintf(stderr, "unknown format %s.\n", fmt);
+            fprintf(stderr, "unknown format %s.\n", get_fmt_str_from_fmt_enum(ref_fmt));
             return 1;
         }
         if (ret)
@@ -173,17 +217,17 @@ int read_vmaf_picture(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, fl
         }
 
         // read dis u
-        if (fmt == VMAF_PIX_FMT_YUV420P || fmt == VMAF_PIX_FMT_YUV422P || fmt == VMAF_PIX_FMT_YUV444P)
+        if (dis_fmt == VMAF_PIX_FMT_YUV420P || dis_fmt == VMAF_PIX_FMT_YUV422P || dis_fmt == VMAF_PIX_FMT_YUV444P)
         {
-            ret = read_image_b(user_data->dis_rfile, dis_vmaf_pict->data_u, 0, w_u, h_u, stride_byte_u);
+            ret = read_image_b(user_data->dis_rfile, dis_vmaf_pict->data[1], 0, dis_vmaf_pict->w[1], dis_vmaf_pict->h[1], dis_vmaf_pict->stride_byte[1]);
         }
-        else if (fmt == VMAF_PIX_FMT_YUV420P10LE || fmt == VMAF_PIX_FMT_YUV422P10LE || fmt == VMAF_PIX_FMT_YUV444P10LE)
+        else if (dis_fmt == VMAF_PIX_FMT_YUV420P10LE || dis_fmt == VMAF_PIX_FMT_YUV422P10LE || dis_fmt == VMAF_PIX_FMT_YUV444P10LE)
         {
-            ret = read_image_w(user_data->dis_rfile, dis_vmaf_pict->data_u, 0, w_u, h_u, stride_byte_u);
+            ret = read_image_w(user_data->dis_rfile, dis_vmaf_pict->data[1], 0, dis_vmaf_pict->w[1], dis_vmaf_pict->h[1], dis_vmaf_pict->stride_byte[1]);
         }
         else
         {
-            fprintf(stderr, "unknown format %s.\n", fmt);
+            fprintf(stderr, "unknown format %s.\n", get_fmt_str_from_fmt_enum(dis_fmt));
             return 1;
         }
         if (ret)
@@ -196,17 +240,17 @@ int read_vmaf_picture(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, fl
         }
 
         // read ref v
-        if (fmt == VMAF_PIX_FMT_YUV420P || fmt == VMAF_PIX_FMT_YUV422P || fmt == VMAF_PIX_FMT_YUV444P)
+        if (ref_fmt == VMAF_PIX_FMT_YUV420P || ref_fmt == VMAF_PIX_FMT_YUV422P || ref_fmt == VMAF_PIX_FMT_YUV444P)
         {
-            ret = read_image_b(user_data->ref_rfile, ref_vmaf_pict->data_v, 0, w_v, h_v, stride_byte_v);
+            ret = read_image_b(user_data->ref_rfile, ref_vmaf_pict->data[2], 0, ref_vmaf_pict->w[2], ref_vmaf_pict->h[2], ref_vmaf_pict->stride_byte[2]);
         }
-        else if (fmt == VMAF_PIX_FMT_YUV420P10LE || fmt == VMAF_PIX_FMT_YUV422P10LE || fmt == VMAF_PIX_FMT_YUV444P10LE)
+        else if (ref_fmt == VMAF_PIX_FMT_YUV420P10LE || ref_fmt == VMAF_PIX_FMT_YUV422P10LE || ref_fmt == VMAF_PIX_FMT_YUV444P10LE)
         {
-            ret = read_image_w(user_data->ref_rfile, ref_vmaf_pict->data_v, 0, w_v, h_v, stride_byte_v);
+            ret = read_image_w(user_data->ref_rfile, ref_vmaf_pict->data[2], 0, ref_vmaf_pict->w[2], ref_vmaf_pict->h[2], ref_vmaf_pict->stride_byte[2]);
         }
         else
         {
-            fprintf(stderr, "unknown format %s.\n", fmt);
+            fprintf(stderr, "unknown format %s.\n", get_fmt_str_from_fmt_enum(ref_fmt));
             return 1;
         }
         if (ret)
@@ -219,17 +263,17 @@ int read_vmaf_picture(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, fl
         }
 
         // read dis v
-        if (fmt == VMAF_PIX_FMT_YUV420P || fmt == VMAF_PIX_FMT_YUV422P || fmt == VMAF_PIX_FMT_YUV444P)
+        if (dis_fmt == VMAF_PIX_FMT_YUV420P || dis_fmt == VMAF_PIX_FMT_YUV422P || dis_fmt == VMAF_PIX_FMT_YUV444P)
         {
-            ret = read_image_b(user_data->dis_rfile, dis_vmaf_pict->data_v, 0, w_v, h_v, stride_byte_v);
+            ret = read_image_b(user_data->dis_rfile, dis_vmaf_pict->data[2], 0, dis_vmaf_pict->w[2], dis_vmaf_pict->h[2], dis_vmaf_pict->stride_byte[2]);
         }
-        else if (fmt == VMAF_PIX_FMT_YUV420P10LE || fmt == VMAF_PIX_FMT_YUV422P10LE || fmt == VMAF_PIX_FMT_YUV444P10LE)
+        else if (dis_fmt == VMAF_PIX_FMT_YUV420P10LE || dis_fmt == VMAF_PIX_FMT_YUV422P10LE || dis_fmt == VMAF_PIX_FMT_YUV444P10LE)
         {
-            ret = read_image_w(user_data->dis_rfile, dis_vmaf_pict->data_v, 0, w_v, h_v, stride_byte_v);
+            ret = read_image_w(user_data->dis_rfile, dis_vmaf_pict->data[2], 0, dis_vmaf_pict->w[2], dis_vmaf_pict->h[2], dis_vmaf_pict->stride_byte[2]);
         }
         else
         {
-            fprintf(stderr, "unknown format %s.\n", fmt);
+            fprintf(stderr, "unknown format %s.\n", get_fmt_str_from_fmt_enum(dis_fmt));
             return 1;
         }
         if (ret)
@@ -265,7 +309,7 @@ int read_frame(float *ref_data, float *dis_data, float *temp_data, int stride_by
     }
     else
     {
-        fprintf(stderr, "unknown format %s.\n", fmt);
+        fprintf(stderr, "unknown format %s.\n", get_fmt_str_from_fmt_enum(fmt));
         return 1;
     }
     if (ret)
@@ -288,7 +332,7 @@ int read_frame(float *ref_data, float *dis_data, float *temp_data, int stride_by
     }
     else
     {
-        fprintf(stderr, "unknown format %s.\n", fmt);
+        fprintf(stderr, "unknown format %s.\n", get_fmt_str_from_fmt_enum(fmt));
         return 1;
     }
     if (ret)
@@ -319,7 +363,7 @@ int read_frame(float *ref_data, float *dis_data, float *temp_data, int stride_by
     }
     else
     {
-        fprintf(stderr, "unknown format %s.\n", fmt);
+        fprintf(stderr, "unknown format %s.\n", get_fmt_str_from_fmt_enum(fmt));
         goto fail_or_end;
     }
 
@@ -342,7 +386,7 @@ int read_frame(float *ref_data, float *dis_data, float *temp_data, int stride_by
     }
     else
     {
-        fprintf(stderr, "unknown format %s.\n", fmt);
+        fprintf(stderr, "unknown format %s.\n", get_fmt_str_from_fmt_enum(fmt));
         goto fail_or_end;
     }
     
@@ -438,7 +482,7 @@ int get_frame_offset(enum VmafPixelFormat fmt, int w, int h, size_t *offset)
     return 0;
 }
 
-int get_color_resolution(enum VmafPixelFormat fmt, int w, int h, size_t *w_u, size_t *h_u, size_t *w_v, size_t *h_v) {
+int get_color_resolution(enum VmafPixelFormat fmt, unsigned int w, unsigned int h, unsigned int *w_u, unsigned int *h_u, unsigned int *w_v, unsigned int *h_v) {
 
     // check that both width and height are positive
     if ((w <= 0) || (h <= 0))
@@ -498,39 +542,4 @@ int get_color_resolution(enum VmafPixelFormat fmt, int w, int h, size_t *w_u, si
 
 int get_stride_byte_from_width(int w) {
     return ALIGN_CEIL(w * sizeof(float));
-}
-
-enum VmafPixelFormat get_pix_fmt_from_input_char_ptr(const char *pix_fmt_option)
-{
-    enum VmafPixelFormat pix_fmt;
-    if (!strcmp(pix_fmt_option, "yuv420p"))
-    {
-        pix_fmt = VMAF_PIX_FMT_YUV420P;
-    }
-    else if (!strcmp(pix_fmt_option, "yuv422p"))
-    {
-        pix_fmt = VMAF_PIX_FMT_YUV422P;
-    }
-    else if (!strcmp(pix_fmt_option, "yuv444p"))
-    {
-        pix_fmt = VMAF_PIX_FMT_YUV444P;
-    }
-    else if (!strcmp(pix_fmt_option, "yuv420p10le"))
-    {
-        pix_fmt = VMAF_PIX_FMT_YUV420P10LE;
-    }
-    else if (!strcmp(pix_fmt_option, "yuv422p10le"))
-    {
-        pix_fmt = VMAF_PIX_FMT_YUV422P10LE;
-    }
-    else if (!strcmp(pix_fmt_option, "yuv444p10le"))
-    {
-        pix_fmt = VMAF_PIX_FMT_YUV444P10LE;
-    }
-    else
-    {
-        fprintf(stderr, "Unknown format %s.\n", pix_fmt_option);
-        pix_fmt = VMAF_PIX_FMT_UNKNOWN;
-    }
-    return pix_fmt;
 }

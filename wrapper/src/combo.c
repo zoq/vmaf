@@ -89,15 +89,15 @@ void* combo_threadfunc(void* vmaf_thread_data)
     double score_psnr = 0;
 #endif
 
-    VmafPicture *ref_vmaf_pict;
-    VmafPicture *dis_vmaf_pict;
-
-    ref_vmaf_pict = (VmafPicture *)malloc(sizeof(VmafPicture));
-    dis_vmaf_pict = (VmafPicture *)malloc(sizeof(VmafPicture));
-
-    ref_vmaf_pict->data_y = 0; dis_vmaf_pict->data_y = 0;
-    ref_vmaf_pict->data_u = 0; dis_vmaf_pict->data_u = 0;
-    ref_vmaf_pict->data_v = 0; dis_vmaf_pict->data_v = 0;
+//    VmafPicture *ref_vmaf_pict;
+//    VmafPicture *dis_vmaf_pict;
+//
+//    ref_vmaf_pict = (VmafPicture *)malloc(sizeof(VmafPicture));
+//    dis_vmaf_pict = (VmafPicture *)malloc(sizeof(VmafPicture));
+//
+//    ref_vmaf_pict->data[0] = 0; dis_vmaf_pict->data[0] = 0;
+//    ref_vmaf_pict->data[1] = 0; dis_vmaf_pict->data[1] = 0;
+//    ref_vmaf_pict->data[2] = 0; dis_vmaf_pict->data[2] = 0;
 
     float *ref_buf = 0; float *ref_buf_u = 0; float *ref_buf_v = 0;
     float *dis_buf = 0; float *dis_buf_u = 0; float *dis_buf_v = 0;
@@ -190,28 +190,58 @@ void* combo_threadfunc(void* vmaf_thread_data)
                 }
             }
 
-            ref_vmaf_pict->data_y = ref_buf;
-            ref_vmaf_pict->w = w;
-            ref_vmaf_pict->h = h;
-            ref_vmaf_pict->stride_byte = get_stride_byte_from_width(ref_vmaf_pict->w);
+//            ref_vmaf_pict->data[0] = ref_buf;
+//            ref_vmaf_pict->pix_fmt = fmt;
+//            ref_vmaf_pict->w[0] = w;
+//            ref_vmaf_pict->h[0] = h;
+//            ref_vmaf_pict->stride_byte[0] = get_stride_byte_from_width(ref_vmaf_pict->w[0]);
+//
+//            int color_resolution_ret = get_color_resolution(ref_vmaf_pict->pix_fmt, ref_vmaf_pict->w[0],
+//                ref_vmaf_pict->h[0], &(ref_vmaf_pict->w[1]), &(ref_vmaf_pict->h[1]),
+//                &(ref_vmaf_pict->w[2]), &(ref_vmaf_pict->h[2]));
+//
+//            if (color_resolution_ret) {
+//                fprintf(stderr, "Calculating resolutions for color channels for ref failed.\n");
+//                goto fail_or_end;
+//            }
+//
+//            ref_vmaf_pict->stride_byte[1] = get_stride_byte_from_width(ref_vmaf_pict->w[1]);
+//            ref_vmaf_pict->stride_byte[2] = get_stride_byte_from_width(ref_vmaf_pict->w[2]);
+//
+//            dis_vmaf_pict->data[0] = dis_buf;
+//            dis_vmaf_pict->pix_fmt = fmt;
+//            dis_vmaf_pict->w[0] = w;
+//            dis_vmaf_pict->h[0] = h;
+//
+//            color_resolution_ret = get_color_resolution(dis_vmaf_pict->pix_fmt, dis_vmaf_pict->w[0],
+//                dis_vmaf_pict->h[0], &(dis_vmaf_pict->w[1]), &(dis_vmaf_pict->h[1]),
+//                &(dis_vmaf_pict->w[2]), &(dis_vmaf_pict->h[2]));
+//
+//            if (color_resolution_ret) {
+//                fprintf(stderr, "Calculating resolutions for color channels for dis failed.\n");
+//                goto fail_or_end;
+//            }
+//
+//            dis_vmaf_pict->stride_byte[0] = get_stride_byte_from_width(dis_vmaf_pict->w[0]);
+//            dis_vmaf_pict->stride_byte[1] = get_stride_byte_from_width(dis_vmaf_pict->w[1]);
+//            dis_vmaf_pict->stride_byte[2] = get_stride_byte_from_width(dis_vmaf_pict->w[2]);
 
-            dis_vmaf_pict->data_y = dis_buf;
-            dis_vmaf_pict->w = w;
-            dis_vmaf_pict->h = h;
-            dis_vmaf_pict->stride_byte = get_stride_byte_from_width(dis_vmaf_pict->w);
+//            fprintf(stderr,"Ref: %dx%d, %dx%d, %dx%d.\n", ref_vmaf_pict->w[0], ref_vmaf_pict->h[0], ref_vmaf_pict->w[1],
+//                ref_vmaf_pict->h[1], ref_vmaf_pict->w[2], ref_vmaf_pict->h[2]);
+//            fprintf(stderr,"Dis: %dx%d, %dx%d, %dx%d.\n", dis_vmaf_pict->w[0], dis_vmaf_pict->h[0], dis_vmaf_pict->w[1],
+//                dis_vmaf_pict->h[1], dis_vmaf_pict->w[2], dis_vmaf_pict->h[2]);
 
-//            fprintf("Address of ref_buf is %p\n", (void *) &ref_buf);
-
-            if (use_color)
-            {
-                ref_vmaf_pict->data_u = ref_buf_u;
-                dis_vmaf_pict->data_u = dis_buf_u;
-                ref_vmaf_pict->data_v = ref_buf_v;
-                dis_vmaf_pict->data_v = dis_buf_v;
-            }
+//            if (use_color)
+//            {
+//                ref_vmaf_pict->data[1] = ref_buf_u;
+//                dis_vmaf_pict->data[1] = dis_buf_u;
+//                ref_vmaf_pict->data[2] = ref_buf_v;
+//                dis_vmaf_pict->data[2] = dis_buf_v;
+//            }
 
             // read frame from file
-            ret = thread_data->read_vmaf_picture(ref_vmaf_pict, dis_vmaf_pict, temp_buf, stride, user_data);
+//            ret = thread_data->read_vmaf_picture(ref_vmaf_pict, dis_vmaf_pict, temp_buf, stride, user_data);
+            ret = thread_data->read_frame(ref_buf, dis_buf, temp_buf, stride, user_data);
 
             if ((ret == 1) || (ret == 2))
             {
@@ -229,15 +259,15 @@ void* combo_threadfunc(void* vmaf_thread_data)
 //            offset_vmaf_picture(ref_vmaf_pict, OPT_RANGE_PIXEL_OFFSET);
 //            offset_vmaf_picture(dis_vmaf_pict, OPT_RANGE_PIXEL_OFFSET);
 
-            ref_buf = ref_vmaf_pict->data_y;
-            dis_buf = dis_vmaf_pict->data_y;
+//            ref_buf = ref_vmaf_pict->data[0];
+//            dis_buf = dis_vmaf_pict->data[0];
 
-            if (use_color) {
-                ref_buf_u = ref_vmaf_pict->data_u;
-                dis_buf_u = dis_vmaf_pict->data_u;
-                ref_buf_v = ref_vmaf_pict->data_v;
-                dis_buf_v = dis_vmaf_pict->data_v;
-            }
+//            if (use_color) {
+//                ref_buf_u = ref_vmaf_pict->data[1];
+//                dis_buf_u = dis_vmaf_pict->data[1];
+//                ref_buf_v = ref_vmaf_pict->data[2];
+//                dis_buf_v = dis_vmaf_pict->data[2];
+//            }
 
             // ===============================================================
             // offset pixel by OPT_RANGE_PIXEL_OFFSET (no offset for color for now)
@@ -322,17 +352,18 @@ void* combo_threadfunc(void* vmaf_thread_data)
             }
         }
 
-        ref_vmaf_pict->data_y = next_ref_buf;
-        dis_vmaf_pict->data_y = next_dis_buf;
+//        ref_vmaf_pict->data[0] = next_ref_buf;
+//        dis_vmaf_pict->data[0] = next_dis_buf;
 
-        if (use_color) {
-            ref_vmaf_pict->data_u = next_ref_buf_u;
-            dis_vmaf_pict->data_u = next_dis_buf_u;
-            ref_vmaf_pict->data_v = next_ref_buf_v;
-            dis_vmaf_pict->data_v = next_dis_buf_v;
-        }
+//        if (use_color) {
+//            ref_vmaf_pict->data[1] = next_ref_buf_u;
+//            dis_vmaf_pict->data[1] = next_dis_buf_u;
+//            ref_vmaf_pict->data[2] = next_ref_buf_v;
+//            dis_vmaf_pict->data[2] = next_dis_buf_v;
+//        }
 
-        ret = thread_data->read_vmaf_picture(ref_vmaf_pict, dis_vmaf_pict, temp_buf, stride, user_data);
+//        ret = thread_data->read_vmaf_picture(ref_vmaf_pict, dis_vmaf_pict, temp_buf, stride, user_data);
+        ret = thread_data->read_frame(ref_buf, dis_buf, temp_buf, stride, user_data);
 
         if (ret == 1)
         {
@@ -354,15 +385,15 @@ void* combo_threadfunc(void* vmaf_thread_data)
             next_frame_read = true;
         }
 
-        next_ref_buf = ref_vmaf_pict->data_y;
-        next_dis_buf = dis_vmaf_pict->data_y;
+//        next_ref_buf = ref_vmaf_pict->data[0];
+//        next_dis_buf = dis_vmaf_pict->data[0];
 
-        if (use_color) {
-            next_ref_buf_u = ref_vmaf_pict->data_u;
-            next_dis_buf_u = dis_vmaf_pict->data_u;
-            next_ref_buf_v = ref_vmaf_pict->data_v;
-            next_dis_buf_v = dis_vmaf_pict->data_v;
-        }
+//        if (use_color) {
+//            next_ref_buf_u = ref_vmaf_pict->data[1];
+//            next_dis_buf_u = dis_vmaf_pict->data[1];
+//            next_ref_buf_v = ref_vmaf_pict->data[2];
+//            next_dis_buf_v = dis_vmaf_pict->data[2];
+//        }
 
         if (next_frame_read)
         {
@@ -775,8 +806,8 @@ void* combo_threadfunc(void* vmaf_thread_data)
 
 fail_or_end:
 
-    aligned_free(ref_vmaf_pict);
-    aligned_free(dis_vmaf_pict);
+//    aligned_free(ref_vmaf_pict);
+//    aligned_free(dis_vmaf_pict);
     aligned_free(temp_buf);
 
 #ifdef MULTI_THREADING
