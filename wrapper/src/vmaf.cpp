@@ -79,8 +79,8 @@ std::string to_zero_lead(const int value, const unsigned precision)
      return oss.str();
 }
 
-std::string pooling_enum_to_string(enum VmafPoolingMethod e) {
-    switch (e) {
+std::string pooling_enum_to_string(enum VmafPoolingMethod pool_method) {
+    switch (pool_method) {
         case VmafPoolingMethod::VMAF_POOL_MIN: return "min";
         case VmafPoolingMethod::VMAF_POOL_MEAN: return "mean";
         case VmafPoolingMethod::VMAF_POOL_HARMONIC_MEAN: return "harmonic_mean";

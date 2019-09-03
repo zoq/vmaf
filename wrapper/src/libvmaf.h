@@ -37,15 +37,15 @@ extern "C" {
 #include <stdbool.h>
 
 enum VmafLogFmt {
-    VMAF_LOG_FMT_XML  = (1 << 0),
-    VMAF_LOG_FMT_JSON = (1 << 1),
-    VMAF_LOG_FMT_CSV  = (1 << 2),
+    VMAF_LOG_FMT_XML                                   = 0,
+    VMAF_LOG_FMT_JSON                                  = 1,
+    VMAF_LOG_FMT_CSV                                   = 2,
 };
 
 enum VmafPoolingMethod {
-    VMAF_POOL_MIN                                      = (1 << 0),
-    VMAF_POOL_MEAN                                     = (1 << 1),
-    VMAF_POOL_HARMONIC_MEAN                            = (1 << 2),
+    VMAF_POOL_MIN                                      = 0,
+    VMAF_POOL_MEAN                                     = 1,
+    VMAF_POOL_HARMONIC_MEAN                            = 2,
 };
 
 typedef struct VmafFeatureCalculationSetting
