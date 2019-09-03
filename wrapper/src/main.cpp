@@ -60,7 +60,7 @@ void print_usage(int argc, char *argv[])
     fprintf(stderr, "log_fmt:\n\txml (default)\n\tjson\n\tcsv\n\n");
     fprintf(stderr, "n_thread:\n\tmaximum threads to use (default 0 - use all threads)\n\n");
     fprintf(stderr, "n_subsample:\n\tn indicates computing on one of every n frames (default 1)\n\n");
-    fprintf(stderr, "additional_models:\n\tadditional models as an escaped json string, e.g. {\\\"VMAF2\\\"\\\:{\\\"model_path\\\"\\\:\\\"model/vmaf_v0.6.1.pkl\\\"\\\,\\\"enable_transform\\\"\\\:\\\"0\\\"}\\\,\\\"VMAF3\\\"\\\:{\\\"model_path\\\"\\\:\\\"model/vmaf_v0.6.1.pkl\\\"\\\,\\\"enable_transform\\\"\\\:\\\"1\\\"\}}");
+    fprintf(stderr, "additional_models:\n\tadditional models as an escaped json string, e.g. {\\\"VMAF2\\\"\\\:{\\\"model_path\\\"\\\:\\\"model/vmaf_v0.6.1.pkl\\\"\\\,\\\"enable_transform\\\"\\\:\\\"0\\\"}\\\,\\\"VMAF3\\\"\\\:{\\\"model_path\\\"\\\:\\\"model/vmaf_v0.6.1.pkl\\\"\\\,\\\"enable_transform\\\"\\\:\\\"1\\\"\}}\n\n");
 }
 
 #if MEM_LEAK_TEST_ENABLE
@@ -154,7 +154,7 @@ unsigned int _get_additional_models(char *model_paths, VmafModel *vmaf_model)
 
             std::string name = GetString(kv_pair.key());
 
-            vmaf_model[additional_model_ind + 1].name = (char*)malloc(sizeof(name) * sizeof(char));
+            vmaf_model[additional_model_ind + 1].name = (char*)malloc(name.length() + 1);
 
             if (!vmaf_model[additional_model_ind + 1].name)
             {
@@ -204,7 +204,7 @@ unsigned int _get_additional_models(char *model_paths, VmafModel *vmaf_model)
 
             }
 
-            vmaf_model[additional_model_ind + 1].path = (char*)malloc(sizeof(path) * sizeof(char));
+            vmaf_model[additional_model_ind + 1].path = (char*)malloc(path.length() + 1);
 
             if (!vmaf_model[additional_model_ind + 1].path)
             {
@@ -213,7 +213,6 @@ unsigned int _get_additional_models(char *model_paths, VmafModel *vmaf_model)
             }
 
             strcpy(vmaf_model[additional_model_ind + 1].path, path.c_str());
-
             additional_model_ind += 1;
 
         }
