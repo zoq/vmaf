@@ -479,7 +479,6 @@ int read_noref_frame(float *dis_data, float *temp_data, int stride_byte, void *s
         goto fail_or_end;
     }
 
-
 fail_or_end:
     return ret;
 }
@@ -569,6 +568,6 @@ int get_color_resolution(enum VmafPixelFormat fmt, unsigned int w, unsigned int 
     return 0;
 }
 
-int get_stride_byte_from_width(int w) {
+int get_stride_byte_from_width(unsigned int w) {
     return ALIGN_CEIL(w * sizeof(float));
 }

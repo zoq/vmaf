@@ -54,7 +54,7 @@ int get_frame_offset(enum VmafPixelFormat fmt, int w, int h, size_t *offset);
 
 int get_color_resolution(enum VmafPixelFormat fmt, unsigned int w, unsigned int h, unsigned int *w_u, unsigned int *h_u, unsigned int *w_v, unsigned int *h_v);
 
-int get_stride_byte_from_width(int w);
+int get_stride_byte_from_width(unsigned int w);
 
 enum VmafPixelFormat get_pix_fmt_from_input_char_ptr(const char *pix_fmt_option);
 
