@@ -564,6 +564,12 @@ int main(int argc, char *argv[])
         vmaf_model_setting |= VMAF_MODEL_SETTING_ENABLE_CONF_INTERVAL;
     }
 
+    // allow for phone_model option, but internally use enable_transform
+    if (cmdOptionExists(argv + 7, argv + argc, "--phone-model"))
+    {
+        vmaf_model_setting |= VMAF_MODEL_SETTING_ENABLE_TRANSFORM;
+    }
+
     additional_model_paths = getCmdOption(argv + 7, argv + argc, "--additional-models");
 
     // populate VmafFeatureModeSetting

@@ -108,8 +108,8 @@ class VmafossexecQualityRunnerTest(unittest.TestCase):
         self.assertAlmostEqual(results[1]['VMAFOSSEXEC_score'], 99.946416604585025, places=4)
         self.assertAlmostEqual(results[1]['VMAFOSSEXEC_some_model_score'], 99.946416604585025, places=4)
 
-    def test_run_vmafossexec_runner_with_061_phone_additional_model(self):
-        print('test on running VMAFOSSEXEC runner with 0.6.1 phone as additional model...')
+    def test_run_vmafossexec_runner_with_061_additional_model_enable_transform(self):
+        print('test on running VMAFOSSEXEC runner with 0.6.1 as additional model + enable_transform...')
         ref_path, dis_path, asset, asset_original = set_default_576_324_videos_for_testing()
 
         self.runner = VmafossExecQualityRunner(

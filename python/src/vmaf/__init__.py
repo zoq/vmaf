@@ -183,8 +183,10 @@ class ExternalProgramCaller(object):
             n_subsample=n_subsample)
         if disable_clip_score:
             vmafossexec_cmd += ' --disable-clip'
-        if enable_transform_score or phone_model:
+        if enable_transform_score:
             vmafossexec_cmd += ' --enable-transform'
+        if phone_model:
+            vmafossexec_cmd += ' --phone-model'
         if disable_avx:
             vmafossexec_cmd += ' --disable-avx'
         if psnr:
