@@ -915,7 +915,7 @@ class VmafossexecQualityRunnerTest(unittest.TestCase):
             result_store=None,
             optional_dict={
                 'model_filepath': VmafConfig.model_path("vmaf_rb_v0.6.3", "vmaf_rb_v0.6.3.pkl"),
-                'phone_model':True,
+                'phone_model': True,
                 'ci': True,
             },
         )

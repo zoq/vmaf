@@ -409,8 +409,8 @@ int main(int argc, char *argv[])
     enum VmafLogFmt log_fmt = VMAF_LOG_FMT_XML;
     enum VmafPoolingMethod pool_method = VMAF_POOL_MEAN;
 
-    unsigned int n_thread = 0;
-    unsigned int n_subsample = 1;
+    int n_thread = 0;
+    int n_subsample = 1;
 
     char *temp;
 #if MEM_LEAK_TEST_ENABLE	
