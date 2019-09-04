@@ -437,7 +437,7 @@ void* combo_threadfunc(void* vmaf_thread_data)
 
             if (use_color) {
 
-                ret = compute_psnr(ref_vmaf_pict_ptr->data[1], dis_vmaf_pict_ptr->data[1],
+                ret = compute_psnr(ref_buf_u, dis_buf_u,
                     ref_vmaf_pict_ptr->w[1], ref_vmaf_pict_ptr->h[1],
                     ref_vmaf_pict_ptr->stride_byte[1], dis_vmaf_pict_ptr->stride_byte[1],
                     &score, peak, psnr_max);
@@ -452,7 +452,7 @@ void* combo_threadfunc(void* vmaf_thread_data)
 
                 insert_array_at(thread_data->psnr_u_array, score, frm_idx);
 
-                ret = compute_psnr(ref_vmaf_pict_ptr->data[2], dis_vmaf_pict_ptr->data[2],
+                ret = compute_psnr(ref_buf_v, dis_buf_v,
                     ref_vmaf_pict_ptr->w[2], ref_vmaf_pict_ptr->h[2],
                     ref_vmaf_pict_ptr->stride_byte[2], dis_vmaf_pict_ptr->stride_byte[2],
                     &score, peak, psnr_max);
@@ -961,6 +961,12 @@ int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
     free_blur_buf(&combo_thread_data.ref_buf_array);
     free_blur_buf(&combo_thread_data.dis_buf_array);
     free_blur_buf(&combo_thread_data.blur_buf_array);
+    if (use_color) {
+        free_blur_buf(&combo_thread_data.ref_buf_u_array);
+        free_blur_buf(&combo_thread_data.dis_buf_u_array);
+        free_blur_buf(&combo_thread_data.ref_buf_v_array);
+        free_blur_buf(&combo_thread_data.dis_buf_v_array);
+    }
 
     free_array(&motion_score_compute_flag_array);
 
