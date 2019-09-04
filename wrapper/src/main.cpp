@@ -455,7 +455,7 @@ int main(int argc, char *argv[])
     {
         fprintf(stderr, "Unknown format %s.\n", pix_fmt_option);
         print_usage(argc, argv);
-        return -1;
+        return 1;
     }
 
     try
