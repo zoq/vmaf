@@ -164,9 +164,8 @@ unsigned int _get_additional_models(char *model_paths, VmafModel *vmaf_model)
 
             strcpy(vmaf_model[additional_model_ind + 1].name, name.c_str());
 
-            vmaf_model[additional_model_ind + 1].enable_conf_interval = false;
-            vmaf_model[additional_model_ind + 1].enable_transform = false;
-            vmaf_model[additional_model_ind + 1].disable_clip = false;
+            vmaf_model[additional_model_ind + 1].vmaf_model_setting = VMAF_MODEL_SETTING_NONE;
+
             std::string path = "";
 
             model_values = GetString(kv_pair.value());
@@ -184,22 +183,26 @@ unsigned int _get_additional_models(char *model_paths, VmafModel *vmaf_model)
             while (inner_kv_pair()) {
 
                 use_option = !strcmp(GetString(inner_kv_pair.value()).c_str(), "1");
-                if (!strcmp(GetString(inner_kv_pair.key()).c_str(), "model_path")) {
+                if (strcmp(GetString(inner_kv_pair.key()).c_str(), "model_path") == 0) {
                     path = GetString(inner_kv_pair.value());
                 }
-                else if (!strcmp(GetString(inner_kv_pair.key()).c_str(), "enable_transform")) {
-                    vmaf_model[additional_model_ind + 1].enable_transform = use_option;
+                else if ((strcmp(GetString(inner_kv_pair.key()).c_str(), "enable_transform") == 0) && use_option) {
+                    vmaf_model[additional_model_ind + 1].vmaf_model_setting |= VMAF_MODEL_SETTING_ENABLE_TRANSFORM;
                 }
-                else if (!strcmp(GetString(inner_kv_pair.key()).c_str(), "enable_conf_interval")) {
-                    vmaf_model[additional_model_ind + 1].enable_conf_interval = use_option;
+                else if ((strcmp(GetString(inner_kv_pair.key()).c_str(), "enable_conf_interval") == 0) && use_option) {
+                    vmaf_model[additional_model_ind + 1].vmaf_model_setting |= VMAF_MODEL_SETTING_ENABLE_CONF_INTERVAL;
                 }
-                else if (!strcmp(GetString(inner_kv_pair.key()).c_str(), "disable_clip")) {
-                    vmaf_model[additional_model_ind + 1].disable_clip = use_option;
+                else if ((strcmp(GetString(inner_kv_pair.key()).c_str(), "disable_clip") == 0) && use_option) {
+                    vmaf_model[additional_model_ind + 1].vmaf_model_setting |= VMAF_MODEL_SETTING_DISABLE_CLIP;
                 }
                 else {
-                    unknown_option_exception = "Additional model option " + GetString(inner_kv_pair.key()) + " is unknown.";
-                    fprintf(stderr, "Error: .\n", unknown_option_exception.c_str());
-                    return -1;
+                    if ((strcmp(GetString(inner_kv_pair.key()).c_str(), "enable_transform") == 1) &&
+                        (strcmp(GetString(inner_kv_pair.key()).c_str(), "enable_conf_interval") == 1) &&
+                        (strcmp(GetString(inner_kv_pair.key()).c_str(), "disable_clip") == 1)) {
+                        unknown_option_exception = "Additional model option " + GetString(inner_kv_pair.key()) + " is unknown.";
+                        fprintf(stderr, "Error: %s.\n", unknown_option_exception.c_str());
+                        return -1;
+                    }
                 }
 
             }
@@ -231,7 +234,7 @@ int run_wrapper(enum VmafPixelFormat pix_fmt, int width, int height, char *ref_p
         char *log_path, enum VmafLogFmt log_fmt, bool disable_avx, int vmaf_feature_mode_setting,
         enum VmafPoolingMethod pool_method,
         int n_thread, int n_subsample, char *model_path, char *additional_model_paths,
-        bool disable_clip, bool enable_conf_interval, bool enable_transform)
+        int vmaf_model_setting)
 {
     double score;
 
@@ -344,9 +347,7 @@ int run_wrapper(enum VmafPixelFormat pix_fmt, int width, int height, char *ref_p
 
     vmafSettings->vmaf_model[0].name = "vmaf";
     vmafSettings->vmaf_model[0].path = model_path;
-    vmafSettings->vmaf_model[0].disable_clip = disable_clip;
-    vmafSettings->vmaf_model[0].enable_transform = enable_transform;
-    vmafSettings->vmaf_model[0].enable_conf_interval = enable_conf_interval;
+    vmafSettings->vmaf_model[0].vmaf_model_setting = vmaf_model_setting;
 
     num_additional_models = _get_additional_models(additional_model_paths, vmafSettings->vmaf_model);
 
@@ -402,6 +403,8 @@ int main(int argc, char *argv[])
     char *log_path = NULL;
 
     int vmaf_feature_mode_setting = VMAF_FEATURE_MODE_SETTING_DO_NONE;
+    int vmaf_model_setting = VMAF_MODEL_SETTING_NONE;
+
     enum VmafPixelFormat pix_fmt = VMAF_PIX_FMT_UNKNOWN;
     enum VmafLogFmt log_fmt = VMAF_LOG_FMT_XML;
     enum VmafPoolingMethod pool_method = VMAF_POOL_MEAN;
@@ -544,25 +547,21 @@ int main(int argc, char *argv[])
         disable_avx = true;
     }
 
-    // use these parameters for the default VMAF model
-
-    bool disable_clip = false;
-    bool enable_transform = false;
-    bool enable_conf_interval = false;
+    // populate VmafModelSetting (use passed in model settings for the default VMAF model)
 
     if (cmdOptionExists(argv + 7, argv + argc, "--disable-clip"))
     {
-        disable_clip = true;
+        vmaf_model_setting |= VMAF_MODEL_SETTING_DISABLE_CLIP;
     }
 
     if (cmdOptionExists(argv + 7, argv + argc, "--enable-transform"))
     {
-        enable_transform = true;
+        vmaf_model_setting |= VMAF_MODEL_SETTING_ENABLE_TRANSFORM;
     }
 
     if (cmdOptionExists(argv + 7, argv + argc, "--ci"))
     {
-        enable_conf_interval = true;
+        vmaf_model_setting |= VMAF_MODEL_SETTING_ENABLE_CONF_INTERVAL;
     }
 
     additional_model_paths = getCmdOption(argv + 7, argv + argc, "--additional-models");
@@ -613,13 +612,13 @@ int main(int argc, char *argv[])
 			getMemory(itr_ctr, 1);
 			ret = run_wrapper(pix_fmt, width, height, ref_path, dis_path,
                 log_path, log_fmt, disable_avx, vmaf_feature_mode_setting, pool_method, n_thread,
-                n_subsample, model_path, additional_model_paths, disable_clip, enable_conf_interval, enable_transform);
+                n_subsample, model_path, additional_model_paths, vmaf_model_setting);
 			getMemory(itr_ctr, 2);
 		}
 #else
         return run_wrapper(pix_fmt, width, height, ref_path, dis_path,
                 log_path, log_fmt, disable_avx, vmaf_feature_mode_setting, pool_method, n_thread,
-                n_subsample, model_path, additional_model_paths, disable_clip, enable_conf_interval, enable_transform);
+                n_subsample, model_path, additional_model_paths, vmaf_model_setting);
 #endif
     }
     catch (const std::exception &e)

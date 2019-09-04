@@ -20,7 +20,7 @@
 #include <stdio.h>
 #include "common/frame.h"
 
-int psnr(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data), void *user_data, int w, int h, enum VmafPixelFormat fmt);
+int psnr(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data), void *user_data, int w, int h, enum VmafPixelFormat fmt_enum);
 
 static void usage(void)
 {
@@ -95,7 +95,7 @@ int main(int argc, const char **argv)
         return 2;
     }
 
-    fmt         = argv[1];
+    fmt      = argv[1];
     ref_path = argv[2];
     dis_path = argv[3];
     w        = atoi(argv[4]);

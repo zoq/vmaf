@@ -200,7 +200,7 @@ void Result::setScoreAggregateMethod(ScoreAggregateMethod scoreAggregateMethod)
 std::unique_ptr<IVmafQualityRunner> 
 VmafQualityRunnerFactory::createVmafQualityRunner(VmafModel *vmaf_model_ptr) {
     std::unique_ptr<IVmafQualityRunner> runner_ptr;
-    if (vmaf_model_ptr->enable_conf_interval)
+    if (vmaf_model_ptr->vmaf_model_setting & VMAF_MODEL_SETTING_ENABLE_CONF_INTERVAL)
     {
         runner_ptr = std::unique_ptr<BootstrapVmafQualityRunner>(new BootstrapVmafQualityRunner(vmaf_model_ptr->path));
     }

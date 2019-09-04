@@ -189,7 +189,9 @@ uninstall:
 	rm -f $(DESTDIR)$(INSTALL_PREFIX)/lib/pkgconfig/libvmaf.pc
 
 testlib: $(SRCDIR)/main.cpp
-	$(CXX) -s -o $@  $(CXXFLAGS) $^ -I $(FEATURESRCDIR) -I $(FEATURESRCDIR)/common -I $(DESTDIR)$(INSTALL_PREFIX)/include -L$(DESTDIR)$(INSTALL_PREFIX)/lib -lvmaf -pthread
+	$(CXX) -s -o $@  $(CXXFLAGS) $^ -I $(FEATURESRCDIR) -I $(FEATURESRCDIR)/common \
+	-DOC_NEW_STYLE_INCLUDES -I $(PTOOLSDIR) -I $(PTOOLSDIR)/opencontainers_1_8_4/include \
+	-I $(DESTDIR)$(INSTALL_PREFIX)/include -I $(LIBVMAF_HEADER) -L$(DESTDIR)$(INSTALL_PREFIX)/lib -lvmaf -pthread
 
 .PHONY: clean
 clean:

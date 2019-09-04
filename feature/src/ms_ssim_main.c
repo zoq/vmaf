@@ -35,16 +35,16 @@ static void usage(void)
     );
 }
 
-int run_ms_ssim(enum VmafPixelFormat fmt, const char *ref_path, const char *dis_path, int w, int h)
+int run_ms_ssim(enum VmafPixelFormat fmt_enum, const char *ref_path, const char *dis_path, int w, int h)
 {
     int ret = 0;
     struct data *s;
     s = (struct data *)malloc(sizeof(struct data));
-    s->format = fmt;
+    s->format = fmt_enum;
     s->width = w;
     s->height = h;
 
-    ret = get_frame_offset(fmt, w, h, &(s->offset));
+    ret = get_frame_offset(fmt_enum, w, h, &(s->offset));
     if (ret)
     {
         goto fail_or_end;
@@ -63,7 +63,7 @@ int run_ms_ssim(enum VmafPixelFormat fmt, const char *ref_path, const char *dis_
         goto fail_or_end;
     }
 
-    ret = ms_ssim(read_frame, s, w, h, fmt);
+    ret = ms_ssim(read_frame, s, w, h, fmt_enum);
 
 fail_or_end:
     if (s->ref_rfile)

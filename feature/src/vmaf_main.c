@@ -52,7 +52,7 @@ static void usage(void)
     );
 }
 
-int run_vmaf(const char *app, enum VmafPixelFormat fmt, const char *ref_path, const char *dis_path, int w, int h)
+int run_vmaf(const char *app, enum VmafPixelFormat fmt_enum, const char *ref_path, const char *dis_path, int w, int h)
 {
     int ret = 0;
     cpu = cpu_autodetect();
@@ -61,11 +61,11 @@ int run_vmaf(const char *app, enum VmafPixelFormat fmt, const char *ref_path, co
     {
         struct noref_data *s;
         s = (struct noref_data *)malloc(sizeof(struct noref_data));
-        s->format = fmt;
+        s->format = fmt_enum;
         s->width = w;
         s->height = h;
 
-        ret = get_frame_offset(fmt, w, h, &(s->offset));
+        ret = get_frame_offset(fmt_enum, w, h, &(s->offset));
         if (ret)
         {
             goto fail_or_end_noref;
@@ -81,7 +81,7 @@ int run_vmaf(const char *app, enum VmafPixelFormat fmt, const char *ref_path, co
             goto fail_or_end_noref;
         }
 
-        ret = motion(read_noref_frame, s, w, h, fmt);
+        ret = motion(read_noref_frame, s, w, h, fmt_enum);
 
 fail_or_end_noref:
         if (s->dis_rfile)
@@ -98,11 +98,11 @@ fail_or_end_noref:
     {
         struct data *s;
         s = (struct data *)malloc(sizeof(struct data));
-        s->format = fmt;
+        s->format = fmt_enum;
         s->width = w;
         s->height = h;
 
-        ret = get_frame_offset(fmt, w, h, &(s->offset));
+        ret = get_frame_offset(fmt_enum, w, h, &(s->offset));
         if (ret)
         {
             goto fail_or_end;
@@ -122,15 +122,15 @@ fail_or_end_noref:
         }
 
         if (!strcmp(app, "adm"))
-            ret = adm(read_frame, s,  w, h, fmt);
+            ret = adm(read_frame, s,  w, h, fmt_enum);
         else if (!strcmp(app, "ansnr"))
-            ret = ansnr(read_frame, s, w, h, fmt);
+            ret = ansnr(read_frame, s, w, h, fmt_enum);
         else if (!strcmp(app, "vif"))
-            ret = vif(read_frame, s, w, h, fmt);
+            ret = vif(read_frame, s, w, h, fmt_enum);
         else if (!strcmp(app, "all"))
-            ret = all(read_frame, s, w, h, fmt);
+            ret = all(read_frame, s, w, h, fmt_enum);
         else if (!strcmp(app, "vifdiff"))
-            ret = vifdiff(read_frame, s, w, h, fmt);
+            ret = vifdiff(read_frame, s, w, h, fmt_enum);
         else
             ret = 2;
 

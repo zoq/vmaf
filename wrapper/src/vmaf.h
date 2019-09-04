@@ -198,7 +198,7 @@ private:
     virtual void _clip_score(LibsvmNusvrTrainTestModel& model, VmafPredictionStruct& predictionStruct);
     virtual void _postproc_transform_clip(VmafPredictionStruct& predictionStruct);
     void _normalize_predict_denormalize_transform_clip(LibsvmNusvrTrainTestModel& model,
-            size_t num_frms, Result& result, bool enable_transform, bool disable_clip,
+            size_t num_frms, Result& result, int vmaf_model_setting,
             std::vector<VmafPredictionStruct>& predictionStructs);
 };
 

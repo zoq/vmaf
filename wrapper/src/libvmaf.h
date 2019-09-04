@@ -81,12 +81,17 @@ typedef struct VmafPicture
     enum VmafPixelFormat pix_fmt;
 } VmafPicture;
 
+enum VmafModelSetting {
+    VMAF_MODEL_SETTING_NONE                            = (1 << 0),
+    VMAF_MODEL_SETTING_ENABLE_TRANSFORM                = (1 << 1),
+    VMAF_MODEL_SETTING_DISABLE_CLIP                    = (1 << 2),
+    VMAF_MODEL_SETTING_ENABLE_CONF_INTERVAL            = (1 << 3),
+};
+
 typedef struct {
     char *name;
     char *path;
-    bool enable_transform;
-    bool disable_clip;
-    bool enable_conf_interval;
+    int vmaf_model_setting;
 } VmafModel;
 
 typedef struct {

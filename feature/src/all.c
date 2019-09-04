@@ -45,7 +45,7 @@ int compute_motion(const float *ref, const float *dis, int w, int h, int ref_str
 
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
-int all(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data), void *user_data, int w, int h, const char *fmt)
+int all(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, int stride, void *user_data), void *user_data, int w, int h, enum VmafPixelFormat fmt_enum)
 {
     double score = 0;
     double score2 = 0;
@@ -83,12 +83,10 @@ int all(int (*read_frame)(float *ref_data, float *main_data, float *temp_data, i
         goto fail_or_end;
     }
 
-    enum VmafPixelFormat fmt_enum = get_pix_fmt_from_input_char_ptr(fmt);
-
     ret = psnr_constants(fmt_enum, &peak, &psnr_max);
     if (ret)
     {
-        printf("error: unknown format %s.\n", fmt);
+        printf("error: unknown format %s.\n", get_fmt_str_from_fmt_enum(fmt_enum));
         fflush(stdout);
         goto fail_or_end;
     }

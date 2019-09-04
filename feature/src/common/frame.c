@@ -33,27 +33,27 @@ static int completed_frames = 0;
 enum VmafPixelFormat get_pix_fmt_from_input_char_ptr(const char *pix_fmt_option)
 {
     enum VmafPixelFormat pix_fmt;
-    if (!strcmp(pix_fmt_option, "yuv420p"))
+    if (strcmp(pix_fmt_option, "yuv420p") == 0)
     {
         pix_fmt = VMAF_PIX_FMT_YUV420P;
     }
-    else if (!strcmp(pix_fmt_option, "yuv422p"))
+    else if (strcmp(pix_fmt_option, "yuv422p") == 0)
     {
         pix_fmt = VMAF_PIX_FMT_YUV422P;
     }
-    else if (!strcmp(pix_fmt_option, "yuv444p"))
+    else if (strcmp(pix_fmt_option, "yuv444p") == 0)
     {
         pix_fmt = VMAF_PIX_FMT_YUV444P;
     }
-    else if (!strcmp(pix_fmt_option, "yuv420p10le"))
+    else if (strcmp(pix_fmt_option, "yuv420p10le") == 0)
     {
         pix_fmt = VMAF_PIX_FMT_YUV420P10LE;
     }
-    else if (!strcmp(pix_fmt_option, "yuv422p10le"))
+    else if (strcmp(pix_fmt_option, "yuv422p10le") == 0)
     {
         pix_fmt = VMAF_PIX_FMT_YUV422P10LE;
     }
-    else if (!strcmp(pix_fmt_option, "yuv444p10le"))
+    else if (strcmp(pix_fmt_option, "yuv444p10le") == 0)
     {
         pix_fmt = VMAF_PIX_FMT_YUV444P10LE;
     }

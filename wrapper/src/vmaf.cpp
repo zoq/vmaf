@@ -517,7 +517,7 @@ void VmafQualityRunner::_postproc_transform_clip(
 
 void VmafQualityRunner::_normalize_predict_denormalize_transform_clip(
         LibsvmNusvrTrainTestModel& model, size_t num_frms, Result& result,
-        bool enable_transform, bool disable_clip,
+        int vmaf_model_setting,
         std::vector<VmafPredictionStruct>& predictionStructs) {
 
     StatVector adm2 = result.get_scores("adm2");
@@ -552,11 +552,11 @@ void VmafQualityRunner::_normalize_predict_denormalize_transform_clip(
 
         _postproc_predict(predictionStruct);
 
-        if (enable_transform) {
+        if (vmaf_model_setting & VMAF_MODEL_SETTING_ENABLE_TRANSFORM) {
             _transform_score(model, predictionStruct);
         }
 
-        if (!disable_clip) {
+        if (!(vmaf_model_setting & VMAF_MODEL_SETTING_DISABLE_CLIP)) {
             _clip_score(model, predictionStruct);
         }
 
@@ -911,7 +911,7 @@ void VmafQualityRunner::predict(Result &result, VmafModel *vmaf_model_ptr)
     std::vector<VmafPredictionStruct> predictionStructs;
 
     _normalize_predict_denormalize_transform_clip(model, num_frms_subsampled, result,
-        vmaf_model_ptr->enable_transform, vmaf_model_ptr->disable_clip, predictionStructs);
+        vmaf_model_ptr->vmaf_model_setting, predictionStructs);
 
     _set_prediction_result(predictionStructs, result, vmaf_model_ptr->name);
 
