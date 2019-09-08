@@ -118,6 +118,8 @@ int compute_vmaf(double* vmaf_score,
                  int (*read_vmaf_picture)(VmafPicture *ref_vmaf_pict, VmafPicture *dis_vmaf_pict, float *temp_data, void *user_data),
 				 void *user_data, VmafSettings *vmafSettings);
 
+unsigned int get_additional_models(char *additional_model_paths, VmafModel *vmaf_model);
+
 #ifdef __cplusplus
 }
 #endif
