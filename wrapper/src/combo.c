@@ -101,13 +101,6 @@ void* combo_threadfunc(void* vmaf_thread_data)
 
     bool offset_flag = false;
 
-#ifdef MULTI_THREADING
-    float *prev_blur_buf_ = 0;
-    float *ref_buf_ = 0;
-    float *dis_buf_ = 0;
-    float *blur_buf_ = 0;
-#endif
-
     // use temp_buf for convolution_f32_c, and fread u and v
     if (!(temp_buf = aligned_malloc(data_sz * 2, MAX_ALIGN)))
     {
@@ -197,11 +190,9 @@ void* combo_threadfunc(void* vmaf_thread_data)
 
             if((NULL == ref_buf) || (NULL == dis_buf) || (NULL == blur_buf))
             {
-#ifdef MULTI_THREADING
                 thread_data->stop_threads = 1;
                 sprintf(errmsg, "Data not available.\n");
                 pthread_mutex_unlock(&thread_data->mutex_readframe);
-#endif
                 goto fail_or_end;
             }
         }
@@ -426,24 +417,22 @@ void* combo_threadfunc(void* vmaf_thread_data)
             }
             else
             {
-#ifdef MULTI_THREADING
                 // avoid multiple memory copies
                 prev_blur_buf = get_blur_buf(&thread_data->blur_buf_array, frm_idx - 1);
                 if(NULL == prev_blur_buf)
                 {
+#ifdef MULTI_THREADING
                     thread_data->stop_threads = 1;
+#endif
                     sprintf(errmsg, "Data not available for prev_blur_buf.\n");
                     goto fail_or_end;
                 }
-#endif
                 if ((ret = compute_motion(prev_blur_buf, blur_buf, w, h, stride, stride, &score)))
                 {
                     sprintf(errmsg, "compute_motion (prev) failed.\n");
                     goto fail_or_end;
                 }
-#ifdef MULTI_THREADING
                 release_blur_buf_reference(&thread_data->blur_buf_array, frm_idx - 1);
-#endif
 
                 if (next_frame_read)
                 {
@@ -685,13 +674,13 @@ int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
     /*
      *	In the multi-thread mode, allocate a fixed size buffer pool for the reference, distorted and blur buffers.
      *	At any point, the no. of required ref and dis buffers is 1 more than the total no. of allotted threads,
-        to accomodate reading the next frame index.
+        to accommodate reading the next frame index.
      *	At any point, one thread operates on the current, previous and next blur buffers, and hence, the no. of
         required blur buffers will be three times the total no. of allotted threads.
      */
     init_blur_array(&combo_thread_data.ref_buf_array, MIN(combo_thread_data.thread_count + 1, MAX_NUM_THREADS), combo_thread_data.data_sz, MAX_ALIGN);
     init_blur_array(&combo_thread_data.dis_buf_array, MIN(combo_thread_data.thread_count + 1, MAX_NUM_THREADS), combo_thread_data.data_sz, MAX_ALIGN);
-    init_blur_array(&combo_thread_data.blur_buf_array, MIN(3 * (combo_thread_data.thread_count), MAX_NUM_THREADS), combo_thread_data.data_sz, MAX_ALIGN);
+    init_blur_array(&combo_thread_data.blur_buf_array, MIN(3 * combo_thread_data.thread_count, MAX_NUM_THREADS), combo_thread_data.data_sz, MAX_ALIGN);
 
     // initialize the mutex that protects the read_frame function
     pthread_mutex_init(&combo_thread_data.mutex_readframe, NULL);
@@ -805,6 +794,10 @@ int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
     // combo_thread_data.stop_threads = 0;
     combo_thread_data.n_subsample = n_subsample;
 
+    DArray	motion_score_compute_flag_array;
+    init_array(&motion_score_compute_flag_array, 1000);
+    combo_thread_data.motion_score_compute_flag_array = &motion_score_compute_flag_array;
+
     // sanity check for width/height
     if (w <= 0 || h <= 0 || (size_t)w > ALIGN_FLOOR(INT_MAX) / sizeof(float))
     {
@@ -828,7 +821,17 @@ int combo(int (*read_frame)(float *ref_data, float *main_data, float *temp_data,
 
     combo_thread_data.data_sz = (size_t)combo_thread_data.stride * h;
 
+    init_blur_array(&combo_thread_data.ref_buf_array, 13, combo_thread_data.data_sz, MAX_ALIGN);
+    init_blur_array(&combo_thread_data.dis_buf_array, 13, combo_thread_data.data_sz, MAX_ALIGN);
+    init_blur_array(&combo_thread_data.blur_buf_array, 36, combo_thread_data.data_sz, MAX_ALIGN);
+
     combo_threadfunc(&combo_thread_data);
+
+    free_blur_buf(&combo_thread_data.ref_buf_array);
+    free_blur_buf(&combo_thread_data.dis_buf_array);
+    free_blur_buf(&combo_thread_data.blur_buf_array);
+
+    free_array(&motion_score_compute_flag_array);
 
     return combo_thread_data.ret;
 
