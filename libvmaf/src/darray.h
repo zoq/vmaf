@@ -25,7 +25,7 @@
 extern "C" {
 #endif
 
-#include "thread.h"
+#include <pthread.h>
 
 typedef struct
 {
