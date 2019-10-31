@@ -26,6 +26,6 @@ script:
     mkdir build && cd build &&
     meson .. --buildtype release &&
     ninja -vC . test &&
-    DESTDIR=install ninja -vC . install &&
+    DESTDIR=$(pwd)/install ninja -vC . install &&
     cd -
   - tox -c python/ -- -v -p no:warnings -m 'main or lib' --doctest-modules
