@@ -23,8 +23,9 @@ script:
     cd -
   - >
     cd libvmaf &&
-    meson build --buildtype release &&
-    ninja -vC build test &&
-    DESTDIR=install ninja -vC build install &&
+    mkdir build && cd build &&
+    meson .. --buildtype release &&
+    ninja -vC . test &&
+    DESTDIR=install ninja -vC . install &&
     cd -
   - tox -c python/ -- -v -p no:warnings -m 'main or lib' --doctest-modules
